@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AWS Cloud Cost Estimator & Migration Advisor</title>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- SheetJS (XLSX) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bidv-theme">
+    <div class="app-container">
+        <!-- Floating Glass Header -->
+        <header class="app-header">
+            <div class="header-logo">
+                <div class="logo-icon">
+                    <i data-lucide="cloud-lightning" class="icon-pulse"></i>
+                </div>
+                <div class="logo-text">
+                    <h1>AWS Cloud</h1>
+                    <span>Cost Estimator & Migration Advisor</span>
+                </div>
+            </div>
+            
+            <div class="header-actions">
+                <button id="btn-download-template" class="btn btn-secondary" title="Tải file Excel mẫu để điền thông tin">
+                    <i data-lucide="file-spreadsheet"></i> Tải file mẫu
+                </button>
+                <button id="btn-load-sample" class="btn btn-accent" title="Nạp dữ liệu mẫu để thử nghiệm nhanh">
+                    <i data-lucide="sparkles"></i> Thử dữ liệu mẫu
+                </button>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <!-- Navigation Tabs -->
+            <nav class="app-tabs">
+                <button class="tab-btn active" data-tab="tab-estimator"><i data-lucide="calculator"></i> Tính toán chi phí Cloud</button>
+                <button class="tab-btn" data-tab="tab-pricing"><i data-lucide="table-properties"></i> Quản lý Bảng giá AWS</button>
+            </nav>
+
+            <!-- TAB 1: ESTIMATOR -->
+            <div id="tab-estimator" class="tab-content active">
+                <!-- 1. TOP STATS BAR -->
+                <section class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper neon-blue">
+                            <i data-lucide="layers"></i>
+                        </div>
+                        <div class="stat-details">
+                            <span class="stat-label">Tổng ứng dụng đánh giá</span>
+                            <h3 id="stat-total-apps" class="stat-value text-glow-blue">0</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper neon-purple">
+                            <i data-lucide="database"></i>
+                        </div>
+                        <div class="stat-details">
+                            <span class="stat-label">Tổng cấu phần hệ thống</span>
+                            <h3 id="stat-total-components" class="stat-value text-glow-purple">0</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper neon-yellow">
+                            <i data-lucide="server"></i>
+                        </div>
+                        <div class="stat-details">
+                            <span class="stat-label">Chi phí On-Premise / Năm</span>
+                            <h3 id="stat-onprem-cost" class="stat-value text-glow-yellow">0đ</h3>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon-wrapper neon-green" id="stat-aws-cost-icon">
+                            <i data-lucide="trending-down"></i>
+                        </div>
+                        <div class="stat-details">
+                            <span class="stat-label">Chi phí AWS ước tính / Năm</span>
+                            <h3 id="stat-aws-cost" class="stat-value text-glow-green">0đ</h3>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. TWO COLUMN WORKSPACE -->
+                <div class="workspace-grid">
+                    <!-- LEFT COLUMN: INPUTS & CONFIGS -->
+                    <section class="workspace-panel inputs-panel">
+                        <div class="panel-header">
+                            <h2><i data-lucide="sliders"></i> Nhập dữ liệu & Cấu hình AWS</h2>
+                            <p class="panel-subtitle">Tải lên danh sách thiết bị của bạn và tùy chỉnh các tham số ước tính của AWS Cloud.</p>
+                        </div>
+
+                        <div class="panel-content">
+                            <!-- File Upload Dropzone -->
+                            <div class="form-group-card upload-card">
+                                <h3 class="group-title"><i data-lucide="upload-cloud"></i> Bước 1: Nhập danh sách hạ tầng (Excel)</h3>
+                                <div class="dropzone" id="excel-dropzone">
+                                    <input type="file" id="excel-file-input" accept=".xlsx, .xls" hidden>
+                                    <div class="dropzone-content">
+                                        <i data-lucide="file-spreadsheet" class="dropzone-icon"></i>
+                                        <p class="dropzone-text">Kéo thả file Excel vào đây hoặc <span>bấm để chọn file</span></p>
+                                        <span class="dropzone-sub">Chấp nhận file .xlsx hoặc .xls với các cột thông tin chuẩn</span>
+                                    </div>
+                                </div>
+                                <div class="file-info-badge" id="loaded-file-badge" style="display: none;">
+                                    <i data-lucide="check-circle" class="text-green"></i>
+                                    <span id="loaded-file-name" class="file-name">filename.xlsx</span>
+                                    <button id="btn-remove-file" class="btn-remove" title="Xóa file"><i data-lucide="x"></i></button>
+                                </div>
+                            </div>
+
+                            <!-- AWS Estimator Settings -->
+                            <div class="form-group-card">
+                                <h3 class="group-title"><i data-lucide="settings"></i> Bước 2: Tham số cấu hình AWS</h3>
+                                
+                                <!-- Select AWS Region -->
+                                <div class="input-wrapper">
+                                    <label for="aws-region"><i data-lucide="globe"></i> Vùng AWS (AWS Region)</label>
+                                    <select id="aws-region" class="custom-select">
+                                        <option value="ap-southeast-1" selected>Asia Pacific (Singapore) - Khuyên dùng cho VN (Mức phí vừa phải, độ trễ thấp)</option>
+                                        <option value="us-east-1">US East (N. Virginia) - Rẻ nhất thế giới (Tối ưu chi phí tối đa)</option>
+                                        <option value="ap-northeast-1">Asia Pacific (Tokyo) - Hiệu năng cao (Độ trễ thấp, mức phí cao hơn)</option>
+                                        <option value="eu-central-1">Europe (Frankfurt) - Tiêu chuẩn Châu Âu (Bảo mật cao)</option>
+                                    </select>
+                                    <div class="region-actions-row">
+                                        <p class="input-tip">Giá dịch vụ AWS thay đổi tùy thuộc vào vị trí địa lý của trung tâm dữ liệu bạn chọn.</p>
+                                        <button id="btn-sync-pricing" class="btn-sync-pricing" type="button" title="Cập nhật bảng giá thực tế từ API AWS">
+                                            <i data-lucide="refresh-cw"></i> Đồng bộ giá AWS Live
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Pricing Plan Commitment Option -->
+                                <div class="input-wrapper margin-top-md">
+                                    <label for="aws-pricing-plan"><i data-lucide="shield-check"></i> Phương thức thanh toán (Purchase Option)</label>
+                                    <select id="aws-pricing-plan" class="custom-select">
+                                        <option value="demand" selected>On-Demand (Trả theo giờ sử dụng thực tế - Không cam kết)</option>
+                                        <option value="ri1">1-Year Reserved Instance (Cam kết 1 năm - Tiết kiệm ~30%)</option>
+                                        <option value="ri3">3-Year Reserved Instance (Cam kết 3 năm - Tiết kiệm ~50%)</option>
+                                    </select>
+                                    <p class="input-tip">AWS giảm giá sâu nếu doanh nghiệp cam kết sử dụng liên tục trong 1 hoặc 3 năm.</p>
+                                </div>
+
+                                <!-- Ancillary costs slider (Network, monitoring, cloudwatch, support) -->
+                                <div class="slider-group margin-top-lg">
+                                    <div class="slider-header">
+                                        <span class="slider-label"><i data-lucide="network"></i> Chi phí dịch vụ phụ trợ (Network, Monitoring, Security)</span>
+                                        <span id="val-ancillary-pct" class="slider-value">10%</span>
+                                    </div>
+                                    <input type="range" id="input-ancillary-pct" min="5" max="30" step="5" value="10" class="custom-range">
+                                    <p class="slider-tip">Phần trăm chi phí bổ sung cho Băng thông mạng, VPN, NAT Gateway, CloudWatch logs, và AWS Support.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- RIGHT COLUMN: VISUALIZATIONS & PORTFOLIO INSIGHTS -->
+                    <section class="workspace-panel charts-panel">
+                        <div class="panel-header">
+                            <h2><i data-lucide="pie-chart"></i> Trực quan hóa chi phí Cloud</h2>
+                            <p class="panel-subtitle">So sánh kinh tế và phân bổ tỷ lệ các nhóm dịch vụ chính</p>
+                        </div>
+
+                        <div class="panel-content flex-charts-column">
+                            <!-- Cost Comparison Chart -->
+                            <div class="chart-container-card">
+                                <div class="chart-header">
+                                    <h3><i data-lucide="bar-chart-3"></i> Phân bổ Chi phí: On-Premise vs AWS</h3>
+                                    <span class="badge info-badge">Đơn vị: VNĐ/Năm</span>
+                                </div>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-comparison"></canvas>
+                                </div>
+                            </div>
+
+                            <!-- AWS Cost Breakdown -->
+                            <div class="chart-container-card">
+                                <div class="chart-header">
+                                    <h3><i data-lucide="pie-chart"></i> Cơ cấu Dịch vụ AWS</h3>
+                                    <span class="badge success-badge">Tổng chi phí</span>
+                                </div>
+                                <div class="chart-wrapper">
+                                    <canvas id="chart-distribution"></canvas>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- 3. FULL WIDTH DETAILS SECTION: RESULTS TABLE -->
+                <section class="results-section">
+                    <div class="section-header-row">
+                        <div class="section-title-group">
+                            <h2><i data-lucide="activity"></i> Kết quả phân tích chi tiết dịch chuyển Cloud</h2>
+                            <p>Danh sách các ứng dụng đã được tính toán. Nhấp vào từng dòng để xem chi tiết cấu phần phần cứng và đề xuất tối ưu.</p>
+                        </div>
+                        
+                        <div class="table-actions">
+                            <div class="search-box">
+                                <i data-lucide="search"></i>
+                                <input type="text" id="search-input" placeholder="Tìm theo Mã PM, Tên PM, Đơn vị đầu mối...">
+                            </div>
+                            <button id="btn-export-excel" class="btn btn-primary" disabled>
+                                <i data-lucide="download"></i> Xuất kết quả Excel
+                            </button>
+                            <button id="btn-print-report" class="btn btn-secondary" onclick="window.print()" disabled>
+                                <i data-lucide="printer"></i> In báo cáo PDF
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="table-container card-container-card">
+                        <table class="premium-table" id="results-table">
+                            <thead>
+                                <tr>
+                                    <th style="width: 50px;">STT</th>
+                                    <th style="width: 100px;">Mã PM</th>
+                                    <th style="width: 200px;">Tên PM</th>
+                                    <th style="width: 180px;">Đơn vị đầu mối nghiệp vụ</th>
+                                    <th class="text-right" style="width: 180px;">Chi phí hạ tầng được phân bổ 1 năm</th>
+                                    <th class="text-right" style="width: 180px;">Chi phí trên AWS Cloud trong 1 năm</th>
+                                    <th style="width: 280px;">Số tiền/Tỷ lệ % dịch vụ</th>
+                                    <th class="text-right" style="width: 180px;">Số tiền tăng/giảm</th>
+                                    <th class="text-right" style="width: 120px;">Tỷ lệ tăng/giảm</th>
+                                    <th style="width: 220px; text-align: center;">Đề xuất (Nên/không nên đưa lên Cloud)</th>
+                                    <th style="width: 40px;"></th>
+                                </tr>
+                            </thead>
+                            <tbody id="results-table-body">
+                                <tr>
+                                    <td colspan="11" class="empty-table-state">
+                                        <div class="empty-state-content">
+                                            <i data-lucide="file-warning"></i>
+                                            <h4>Chưa có dữ liệu phân tích</h4>
+                                            <p>Vui lòng kéo thả file Excel vào bảng điều khiển phía trên hoặc bấm nút "Thử dữ liệu mẫu" để bắt đầu trải nghiệm.</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+
+                <!-- 4. CLOUD MIGRATION CHEATSHEET & DESIGN DETAILS -->
+                <section class="cheatsheet-section">
+                    <div class="cheatsheet-grid">
+                        <!-- Rule of Recommendation -->
+                        <div class="cheatsheet-card">
+                            <h3><i data-lucide="brain"></i> Quy tắc đề xuất tối ưu thông minh</h3>
+                            <p class="card-intro">Công cụ tự động đánh giá kinh tế dựa trên các chỉ số tài nguyên và ngân sách:</p>
+                            <ul class="rule-list">
+                                <li>
+                                    <div class="rule-icon neon-green"><i data-lucide="check"></i></div>
+                                    <div class="rule-text">
+                                        <strong>Đề xuất: Nên đưa lên Cloud</strong>
+                                        <span>Khi chi phí AWS nhỏ hơn hoặc xấp xỉ chi phí On-Premise (chênh lệch dưới 15%). Di trú giúp cải thiện 99.99% độ sẵn sàng, bảo mật và khả năng mở rộng tự động.</span>
+                                    </div>
+                                </li>
+                                <li>
+                                    <div class="rule-icon neon-red"><i data-lucide="alert-triangle"></i></div>
+                                    <div class="rule-text">
+                                        <strong>Đề xuất: Không nên đưa lên Cloud</strong>
+                                        <span>Khi chi phí hạ tầng On-Premise cũ được phân bổ quá thấp so với khối lượng tài nguyên thực tế yêu cầu trên Cloud (chi phí AWS cao hơn >15%). Khuyến nghị tối ưu lại mã nguồn hoặc dùng Reserved Instances để kéo giảm chi phí trước khi di chuyển.</span>
+                                    </div>
+                                </li>
+                            </ul>
+                        </div>
+
+                        <!-- AWS Matching Rules -->
+                        <div class="cheatsheet-card">
+                            <h3><i data-lucide="git-compare"></i> Cách thức quy đổi dịch vụ AWS chuẩn xác</h3>
+                            <p class="card-intro">Thuật toán ánh xạ cấu hình tài nguyên của hệ thống sang AWS Service:</p>
+                            <div class="mapping-table-wrapper">
+                                <table class="mapping-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Cấu phần gốc</th>
+                                            <th>Nhận diện</th>
+                                            <th>AWS Dịch vụ ánh xạ</th>
+                                            <th>Loại ổ đĩa / Mặc định</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <tr>
+                                            <td><strong>Cơ sở dữ liệu</strong></td>
+                                            <td>Tên cấu phần chứa "db", "sql", "postgres"</td>
+                                            <td><span class="service-pill db-pill">Amazon RDS Postgres</span></td>
+                                            <td>Lưu trữ SSD gp3 (Đọc/ghi nhanh, giá rẻ)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Ứng dụng / Web</strong></td>
+                                            <td>Các cấu phần còn lại</td>
+                                            <td><span class="service-pill app-pill">Amazon EKS/EC2 Compute</span></td>
+                                            <td>Lưu trữ EBS gp3 (SSD đa dụng)</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Cluster Fee</strong></td>
+                                            <td>Tự động tích hợp</td>
+                                            <td><span class="service-pill eks-pill">AWS EKS Cluster Fee</span></td>
+                                            <td>Bổ sung $0.10/giờ (~876$/năm) cho mỗi ứng dụng</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- TAB 2: PRICING MANAGEMENT -->
+            <div id="tab-pricing" class="tab-content" style="display: none;">
+                <div class="workspace-grid">
+                    <!-- LEFT COLUMN: CONFIGS & ADD CUSTOM SIZES -->
+                    <section class="workspace-panel inputs-panel">
+                        <div class="panel-header">
+                            <h2><i data-lucide="settings-2"></i> Cấu hình chung & Thêm Máy chủ</h2>
+                            <p class="panel-subtitle">Chỉnh sửa tỷ giá ngoại tệ, đơn giá lưu trữ, và đăng ký thêm các cấu hình máy chủ mới.</p>
+                        </div>
+                        <div class="panel-content">
+                            <!-- Exchange Rate & Storage group -->
+                            <div class="form-group-card">
+                                <h3 class="group-title"><i data-lucide="coins"></i> Tỷ giá & Lưu trữ (VND/USD & Storage)</h3>
+                                <div class="input-wrapper">
+                                    <label for="pricing-usd-vnd"><i data-lucide="arrow-right-left"></i> Tỷ giá quy đổi (1 USD = ? VNĐ)</label>
+                                    <input type="number" id="pricing-usd-vnd" class="custom-input-text" value="26000" min="1000" max="100000" step="500">
+                                </div>
+                                <div class="input-wrapper margin-top-md">
+                                    <label for="pricing-storage-ebs"><i data-lucide="hard-drive"></i> Lưu trữ EBS EC2 ($ / 100GB / tháng)</label>
+                                    <input type="number" id="pricing-storage-ebs" class="custom-input-text" value="9.60" min="0" max="100" step="0.1">
+                                </div>
+                                <div class="input-wrapper margin-top-md">
+                                    <label for="pricing-storage-rds"><i data-lucide="database"></i> Lưu trữ RDS Postgres ($ / 100GB / tháng)</label>
+                                    <input type="number" id="pricing-storage-rds" class="custom-input-text" value="13.80" min="0" max="100" step="0.1">
+                                </div>
+                                <div class="input-wrapper margin-top-md">
+                                    <label for="pricing-storage-msk"><i data-lucide="git-merge"></i> Lưu trữ MSK Kafka ($ / 100GB / tháng)</label>
+                                    <input type="number" id="pricing-storage-msk" class="custom-input-text" value="10.00" min="0" max="100" step="0.1">
+                                </div>
+                            </div>
+
+                            <!-- Add custom instance size -->
+                            <div class="form-group-card margin-top-lg">
+                                <h3 class="group-title"><i data-lucide="plus-circle"></i> Đăng ký Dòng Máy chủ mới</h3>
+                                <form id="form-add-instance" onsubmit="return false;">
+                                    <div class="input-wrapper">
+                                        <label for="add-service-type">Dịch vụ AWS</label>
+                                        <select id="add-service-type" class="custom-select">
+                                            <option value="ec2">Amazon EC2 / EKS Compute</option>
+                                            <option value="rds">Amazon RDS Postgres</option>
+                                            <option value="msk">Amazon MSK Kafka</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-wrapper margin-top-md">
+                                        <label for="add-inst-name">Tên dòng máy (Instance Name)</label>
+                                        <input type="text" id="add-inst-name" class="custom-input-text" placeholder="Ví dụ: m6i.xlarge, db.m7g.large" required>
+                                    </div>
+                                    <div class="row-inputs margin-top-md" style="display: flex; gap: 15px;">
+                                        <div class="input-wrapper" style="flex: 1;">
+                                            <label for="add-inst-cpu">vCPU (Cores)</label>
+                                            <input type="number" id="add-inst-cpu" class="custom-input-text" min="1" max="256" value="2" required>
+                                        </div>
+                                        <div class="input-wrapper" style="flex: 1;">
+                                            <label for="add-inst-ram">RAM (GB)</label>
+                                            <input type="number" id="add-inst-ram" class="custom-input-text" min="1" max="1024" value="8" required>
+                                        </div>
+                                    </div>
+                                    <div class="input-wrapper margin-top-md">
+                                        <label for="add-inst-rate">Đơn giá tháng ($ / 730h)</label>
+                                        <input type="number" id="add-inst-rate" class="custom-input-text" min="0" max="100000" step="0.01" value="100" required>
+                                    </div>
+                                    <button type="submit" id="btn-add-instance-submit" class="btn btn-accent" style="width: 100%; margin-top: 15px; display: flex; justify-content: center; align-items: center; gap: 8px;">
+                                        <i data-lucide="plus"></i> Thêm vào Bảng giá
+                                    </button>
+                                </form>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- RIGHT COLUMN: PRICING CATALOGS EDITABLE TABLES -->
+                    <section class="workspace-panel charts-panel" style="overflow-y: auto;">
+                        <div class="panel-header">
+                            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px; width: 100%;">
+                                <h2 style="margin: 0;"><i data-lucide="table-properties"></i> Danh mục bảng giá dịch vụ động</h2>
+                                <div style="display: flex; gap: 10px;">
+                                    <button id="btn-save-pricing" class="btn btn-primary" style="display: flex; align-items: center; gap: 8px;">
+                                        <i data-lucide="save"></i> Lưu & Áp dụng
+                                    </button>
+                                    <button id="btn-reset-pricing" class="btn btn-secondary" style="display: flex; align-items: center; gap: 8px;">
+                                        <i data-lucide="rotate-ccw"></i> Khôi phục mặc định
+                                    </button>
+                                </div>
+                            </div>
+                            <p class="panel-subtitle" style="margin-top: 5px;">Chỉnh sửa trực tiếp thông số và đơn giá của từng dòng máy chủ trong danh mục. Giá trị tính toán sẽ tự động chia 730h làm tròn.</p>
+                        </div>
+                        <div class="panel-content flex-charts-column" style="gap: 25px; margin-top: 15px;">
+                            <!-- RDS Section -->
+                            <div class="catalog-table-card">
+                                <div class="catalog-table-header color-rds">
+                                    <h3><i data-lucide="database"></i> Amazon RDS Postgres (db.m7g)</h3>
+                                </div>
+                                <div class="catalog-table-wrapper">
+                                    <table class="editable-catalog-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Tên Instance</th>
+                                                <th style="width: 85px;">vCPU</th>
+                                                <th style="width: 95px;">RAM (GB)</th>
+                                                <th style="width: 140px;">USD/Tháng (730h)</th>
+                                                <th style="width: 50px;"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="table-pricing-rds">
+                                            <!-- Dynamically Rendered -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- EC2 Section -->
+                            <div class="catalog-table-card">
+                                <div class="catalog-table-header color-ec2">
+                                    <h3><i data-lucide="server"></i> Amazon EC2 / EKS Compute (c6i, m6i, t3a, c6a)</h3>
+                                </div>
+                                <div class="catalog-table-wrapper">
+                                    <table class="editable-catalog-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Tên Instance</th>
+                                                <th style="width: 85px;">vCPU</th>
+                                                <th style="width: 95px;">RAM (GB)</th>
+                                                <th style="width: 140px;">USD/Tháng (730h)</th>
+                                                <th style="width: 50px;"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="table-pricing-ec2">
+                                            <!-- Dynamically Rendered -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- MSK Section -->
+                            <div class="catalog-table-card">
+                                <div class="catalog-table-header color-msk">
+                                    <h3><i data-lucide="git-merge"></i> Amazon MSK Kafka (m7g)</h3>
+                                </div>
+                                <div class="catalog-table-wrapper">
+                                    <table class="editable-catalog-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Tên Instance</th>
+                                                <th style="width: 85px;">vCPU</th>
+                                                <th style="width: 95px;">RAM (GB)</th>
+                                                <th style="width: 140px;">USD/Tháng (730h)</th>
+                                                <th style="width: 50px;"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="table-pricing-msk">
+                                            <!-- Dynamically Rendered -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </div>
+        </main>
+
+        <footer class="app-footer">
+            <p>&copy; 2026 AWS Cloud Cost Advisor. Phát triển trên nền tảng so sánh giá dịch vụ AWS Pricing Calculator cho EKS/EC2 & RDS Postgres.</p>
+            <p class="footer-links">
+                <a href="#aws-region">Lựa chọn Region</a> &bull; 
+                <a href="#results-table">Bảng kết quả phân tích</a> &bull; 
+                <a href="https://calculator.aws" target="_blank" rel="noopener"><i data-lucide="external-link" style="display:inline; width:12px; height:12px; vertical-align:middle;"></i> Trang chủ AWS Calculator</a>
+            </p>
+        </footer>
+    </div>
+
+    <!-- Custom Cost Engine Script -->
+    <script src="app.js"></script>
+</body>
+</html>
