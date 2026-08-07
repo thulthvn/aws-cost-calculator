@@ -81,7 +81,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let INSTANCE_CATALOG = JSON.parse(JSON.stringify(DEFAULT_INSTANCE_CATALOG));
 
     // 3b. EC2 MULTI-DIMENSIONAL SPLITTING SOLVER (Application & Other Components)
-    const solveEC2Splitting = (cpuReq, ramReq, region) => {
+    const solveEC2Splitting = (cpuReqRaw, ramReqRaw, region) => {
+        const cpuReq = (isNaN(cpuReqRaw) || cpuReqRaw === null || cpuReqRaw === undefined) ? 0 : cpuReqRaw;
+        const ramReq = (isNaN(ramReqRaw) || ramReqRaw === null || ramReqRaw === undefined) ? 0 : ramReqRaw;
         let remCpu = cpuReq;
         let remRam = ramReq;
         const selected = {}; // name -> count
@@ -137,7 +139,9 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     // 4. PRICE MATCHING ALGORITHM
-    const matchInstance = (serviceType, cpuReq, ramReq, region) => {
+    const matchInstance = (serviceType, cpuReqRaw, ramReqRaw, region) => {
+        const cpuReq = (isNaN(cpuReqRaw) || cpuReqRaw === null || cpuReqRaw === undefined) ? 0 : cpuReqRaw;
+        const ramReq = (isNaN(ramReqRaw) || ramReqRaw === null || ramReqRaw === undefined) ? 0 : ramReqRaw;
         if (serviceType === 'rds') {
             // Find an exact match first
             const exactMatch = INSTANCE_CATALOG.rds.find(inst => inst.cpu === cpuReq && inst.ram === ramReq);
@@ -239,11 +243,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Currency Formatting (VND and USD)
     const formatVND = (vnd) => {
-        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(vnd);
+        const val = (isNaN(vnd) || vnd === null || vnd === undefined) ? 0 : vnd;
+        return new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(val);
     };
 
     const formatUSD = (usd) => {
-        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(usd);
+        const val = (isNaN(usd) || usd === null || usd === undefined) ? 0 : usd;
+        return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(val);
     };
 
     // Currency conversion rate (1 USD = 26,000 VND)
@@ -381,10 +387,13 @@ document.addEventListener('DOMContentLoaded', () => {
             let rawOwner = String(getRowValue(row, ["don vi dau moi nghiep vu", "dau moi", "nghiep vu", "chu so huu", "business owner", "owner", "don vi"]) || "").trim();
             let rawOnPremStr = String(getRowValue(row, ["chi phi ha tang duoc phan bo 1 nam", "chi phi ha tang", "chi phi 1 nam", "on-prem cost", "onprem cost", "budget", "chi phi"]) || "");
             const rawCompName = String(getRowValue(row, ["ten cau phan", "cau phan", "component name", "component", "device", "ten thiet bi"]) || "").trim();
-            
-            const rawCpu = parseFloat(getRowValue(row, ["cpu", "vcpu", "cores", "core"]) || 0);
-            const rawRam = parseFloat(getRowValue(row, ["ram (gb)", "ram", "memory", "dung luong ram"]) || 0);
-            const rawStorage = parseFloat(getRowValue(row, ["storage (gb)", "storage", "disk", "dung luong", "o cung", "hdd", "ssd"]) || 0);
+            let cpuVal = parseFloat(getRowValue(row, ["cpu", "vcpu", "cores", "core"]));
+            let ramVal = parseFloat(getRowValue(row, ["ram (gb)", "ram", "memory", "dung luong ram"]));
+            let storageVal = parseFloat(getRowValue(row, ["storage (gb)", "storage", "disk", "dung luong", "o cung", "hdd", "ssd"]));
+
+            const rawCpu = isNaN(cpuVal) ? 0 : cpuVal;
+            const rawRam = isNaN(ramVal) ? 0 : ramVal;
+            const rawStorage = isNaN(storageVal) ? 0 : storageVal;
 
             // Carry forward values if current row has component data but missing parent app headers
             if (!rawCode && !rawName && rawCompName) {
@@ -948,7 +957,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         callbacks: {
                             label: function(context) {
                                 const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                const percentage = ((context.raw / total) * 100).toFixed(1);
+                                const percentage = total > 0 ? ((context.raw / total) * 100).toFixed(1) : "0.0";
                                 return ` ${context.label}: ${formatVND(context.raw)} (${percentage}%)`;
                             }
                         }
