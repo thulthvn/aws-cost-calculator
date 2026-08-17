@@ -74,7 +74,8 @@ document.addEventListener('DOMContentLoaded', () => {
             rds: { 'us-east-1': 0.138, 'ap-southeast-1': 0.138, 'ap-northeast-1': 0.138, 'eu-central-1': 0.138 }, // gp3 RDS
             msk: { 'us-east-1': 0.10, 'ap-southeast-1': 0.10, 'ap-northeast-1': 0.10, 'eu-central-1': 0.10 }      // gp3 MSK Storage
         },
-        eksClusterYear: 876
+        eksClusterYear: 876,
+        dataTransferOutRate: 0.12
     };
 
     // Active working catalog state (mutable and synchronized with localStorage)
@@ -260,20 +261,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const headers = [
             "STT", "Mã PM", "Tên PM", "Đơn vị đầu mối nghiệp vụ", 
             "Chi phí hạ tầng được phân bổ 1 năm", "Tên cấu phần", 
-            "CPU", "RAM (GB)", "Storage (GB)"
+            "CPU", "RAM (GB)", "Storage (GB)", "Data Transfer Out (GB)"
         ];
 
         // High fidelity sample data to help user understand the formatting
         const sampleRows = [
-            [1, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", 650000000, "Web Server Cluster", 4, 8, 150],
-            [2, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", 650000000, "Database Postgres High-Availability", 16, 64, 1500],
-            [3, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", 120000000, "Nền tảng CMS Frontend", 2, 4, 50],
-            [4, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", 120000000, "Cơ sở dữ liệu người dùng SQL", 4, 16, 250],
-            [5, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", 90000000, "API Gateway & Application Server", 2, 4, 30],
-            [6, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", 90000000, "Database HRM Postgres", 2, 8, 80],
-            [7, "PM-04", "Ứng dụng Di động m-Banking", "Khối Ngân hàng Số", 180000000, "Microservices Application Engine", 12, 24, 200],
-            [8, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", 1200000000, "Spark/BI Data Processing Node", 32, 128, 500],
-            [9, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", 1200000000, "Data Warehouse Postgres Analytics", 64, 256, 4000]
+            [1, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", 650000000, "Web Server Cluster", 4, 8, 150, 100],
+            [2, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", 650000000, "Database Postgres High-Availability", 16, 64, 1500, 500],
+            [3, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", 120000000, "Nền tảng CMS Frontend", 2, 4, 50, 50],
+            [4, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", 120000000, "Cơ sở dữ liệu người dùng SQL", 4, 16, 250, 150],
+            [5, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", 90000000, "API Gateway & Application Server", 2, 4, 30, 20],
+            [6, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", 90000000, "Database HRM Postgres", 2, 8, 80, 40],
+            [7, "PM-04", "Ứng dụng Di động m-Banking", "Khối Ngân hàng Số", 180000000, "Microservices Application Engine", 12, 24, 200, 300],
+            [8, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", 1200000000, "Spark/BI Data Processing Node", 32, 128, 500, 1000],
+            [9, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", 1200000000, "Data Warehouse Postgres Analytics", 64, 256, 4000, 2000]
         ];
 
         // Build workbook
@@ -291,7 +292,8 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 35 }, // Tên cấu phần
             { wch: 8 },  // CPU
             { wch: 12 }, // RAM
-            { wch: 14 }  // Storage
+            { wch: 14 }, // Storage
+            { wch: 22 }  // Data Transfer Out (GB)
         ];
 
         XLSX.utils.book_append_sheet(wb, ws, "Danh sach hạ tầng");
@@ -390,10 +392,12 @@ document.addEventListener('DOMContentLoaded', () => {
             let cpuVal = parseFloat(getRowValue(row, ["cpu", "vcpu", "cores", "core"]));
             let ramVal = parseFloat(getRowValue(row, ["ram (gb)", "ram", "memory", "dung luong ram"]));
             let storageVal = parseFloat(getRowValue(row, ["storage (gb)", "storage", "disk", "dung luong", "o cung", "hdd", "ssd"]));
+            let dtoVal = parseFloat(getRowValue(row, ["data transfer out (gb)", "data transfer out", "data transfer", "transfer out", "outbound transfer", "dto"]));
 
             const rawCpu = isNaN(cpuVal) ? 0 : cpuVal;
             const rawRam = isNaN(ramVal) ? 0 : ramVal;
             const rawStorage = isNaN(storageVal) ? 0 : storageVal;
+            const rawDto = isNaN(dtoVal) ? 0 : dtoVal;
 
             // Carry forward values if current row has component data but missing parent app headers
             if (!rawCode && !rawName && rawCompName) {
@@ -433,6 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 cpu: rawCpu,
                 ram: rawRam,
                 storage: rawStorage,
+                dataTransferOut: rawDto,
                 // Assign Database or Compute service
                 serviceType: classifyService(rawCompName)
             });
@@ -480,11 +485,14 @@ document.addEventListener('DOMContentLoaded', () => {
         if (plan === 'ri1') discountMultiplier = 0.70; // 30% off
         if (plan === 'ri3') discountMultiplier = 0.50; // 50% off
 
+        const dtoRate = INSTANCE_CATALOG.dataTransferOutRate !== undefined ? INSTANCE_CATALOG.dataTransferOutRate : 0.12;
+
         processedPortfolio = parsedPortfolio.map((app) => {
             let totalBaseAwsUSD = 0;
             let totalComputeUSD = 0;
             let totalDatabaseUSD = 0;
             let totalStorageUSD = 0;
+            let totalDataTransferUSD = 0;
             let hasCompute = false;
 
             const calculatedComponents = app.components.map((comp) => {
@@ -500,11 +508,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 const storageRate = INSTANCE_CATALOG.storage[storageType][region];
                 const yearlyStorageUSD = comp.storage * storageRate * 12;
 
-                const componentYearlyTotalUSD = yearlyComputeUSD + yearlyStorageUSD;
+                // Data Transfer Out cost
+                const yearlyDataTransferUSD = (comp.dataTransferOut || 0) * dtoRate * 12;
+
+                const componentYearlyTotalUSD = yearlyComputeUSD + yearlyStorageUSD + yearlyDataTransferUSD;
 
                 // Sum up aggregates
                 totalBaseAwsUSD += componentYearlyTotalUSD;
                 totalStorageUSD += yearlyStorageUSD;
+                totalDataTransferUSD += yearlyDataTransferUSD;
 
                 if (comp.serviceType === 'rds' || comp.serviceType === 'msk') {
                     totalDatabaseUSD += yearlyComputeUSD;
@@ -519,6 +531,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     matchedInstanceCount: matched.count,
                     yearlyComputeCostVND: yearlyComputeUSD * USD_TO_VND,
                     yearlyStorageCostVND: yearlyStorageUSD * USD_TO_VND,
+                    yearlyDataTransferCostVND: yearlyDataTransferUSD * USD_TO_VND,
                     totalYearlyCostVND: componentYearlyTotalUSD * USD_TO_VND
                 };
             });
@@ -553,6 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 components: calculatedComponents,
                 eksClusterFeeVND,
                 totalAncillaryVND,
+                totalDataTransferVND: totalDataTransferUSD * USD_TO_VND,
                 grandTotalAwsVND,
                 totalComputeVND: totalComputeUSD * USD_TO_VND,
                 totalDatabaseVND: totalDatabaseUSD * USD_TO_VND,
@@ -642,7 +656,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const computePct = Math.round((app.totalComputeVND / app.grandTotalAwsVND) * 100) || 0;
             const dbPct = Math.round((app.totalDatabaseVND / app.grandTotalAwsVND) * 100) || 0;
             const storagePct = Math.round((app.totalStorageVND / app.grandTotalAwsVND) * 100) || 0;
-            const ancillaryPct = Math.round((app.totalAncillaryVND / app.grandTotalAwsVND) * 100) || 0;
+            const totalPhuTroVND = app.totalAncillaryVND + (app.totalDataTransferVND || 0);
+            const ancillaryPct = Math.round((totalPhuTroVND / app.grandTotalAwsVND) * 100) || 0;
 
             const isSave = app.deltaVND <= 0;
             const deltaClass = isSave ? 'delta-save' : 'delta-increase';
@@ -717,9 +732,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <th class="text-right">vCPU</th>
                                             <th class="text-right">RAM (GB)</th>
                                             <th class="text-right">Storage (GB)</th>
+                                            <th class="text-right">Data Transfer (GB)</th>
                                             <th>AWS Dịch vụ quy đổi</th>
                                             <th class="text-right">Phí Compute/Năm</th>
                                             <th class="text-right">Phí Storage/Năm</th>
+                                            <th class="text-right">Phí Data Transfer/Năm</th>
                                             <th class="text-right">Tổng chi phí/Năm</th>
                                         </tr>
                                     </thead>
@@ -731,9 +748,11 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 <td class="text-right">${comp.cpu}</td>
                                                 <td class="text-right">${comp.ram} GB</td>
                                                 <td class="text-right">${comp.storage} GB</td>
+                                                <td class="text-right">${comp.dataTransferOut || 0} GB</td>
                                                 <td><span class="instance-code">${comp.matchedInstanceCount === 1 ? comp.matchedInstance : comp.matchedInstanceCount + ' x ' + comp.matchedInstance}</span></td>
                                                 <td class="text-right cost-bold-blue">${formatVND(comp.yearlyComputeCostVND)}</td>
                                                 <td class="text-right cost-bold-yellow">${formatVND(comp.yearlyStorageCostVND)}</td>
+                                                <td class="text-right cost-bold-purple" style="color: #8E24AA !important;">${formatVND(comp.yearlyDataTransferCostVND || 0)}</td>
                                                 <td class="text-right cost-bold-green">${formatVND(comp.totalYearlyCostVND)}</td>
                                             </tr>
                                         `).join('')}
@@ -744,29 +763,34 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 <td class="text-right">-</td>
                                                 <td class="text-right">-</td>
                                                 <td class="text-right">-</td>
+                                                <td class="text-right">-</td>
                                                 <td><span class="instance-code">eks.controlplane</span></td>
                                                 <td class="text-right cost-bold-blue">${formatVND(app.eksClusterFeeVND)}</td>
+                                                <td class="text-right">-</td>
                                                 <td class="text-right">-</td>
                                                 <td class="text-right cost-bold-green">${formatVND(app.eksClusterFeeVND)}</td>
                                             </tr>
                                         ` : ''}
                                         <tr>
                                             <td><strong>Chi phí dịch vụ bổ trợ</strong></td>
-                                            <td><span class="service-pill" style="background: rgba(255, 69, 58, 0.1); color: var(--neon-red); border: 1px solid rgba(255, 69, 58, 0.2);">Ancillary</span></td>
+                                            <td><span class="service-pill" style="background: rgba(0, 90, 54, 0.08); color: #005A36; border: 1px solid rgba(0, 90, 54, 0.15);">Ancillary</span></td>
+                                            <td class="text-right">-</td>
                                             <td class="text-right">-</td>
                                             <td class="text-right">-</td>
                                             <td class="text-right">-</td>
                                             <td><span class="instance-code">Network & Ops (${elAncillaryPct.value}%)</span></td>
                                             <td class="text-right">-</td>
                                             <td class="text-right">-</td>
+                                            <td class="text-right">-</td>
                                             <td class="text-right cost-bold-green">${formatVND(app.totalAncillaryVND)}</td>
                                         </tr>
-                                        <tr style="background: rgba(255,255,255,0.02); font-weight:700;">
-                                            <td colspan="5">Tổng cộng toàn bộ cấu phần ứng dụng</td>
-                                            <td><span class="instance-code" style="color:var(--neon-green)">AWS Mapped</span></td>
-                                            <td class="text-right" style="color:var(--neon-blue)">${formatVND(app.totalComputeVND + app.eksClusterFeeVND)}</td>
-                                            <td class="text-right" style="color:var(--neon-yellow)">${formatVND(app.totalStorageVND)}</td>
-                                            <td class="text-right" style="color:var(--neon-green)">${formatVND(app.grandTotalAwsVND)}</td>
+                                        <tr style="background: rgba(0, 90, 54, 0.04); font-weight:700;">
+                                            <td colspan="6">Tổng cộng toàn bộ cấu phần ứng dụng</td>
+                                            <td><span class="instance-code" style="color: #005A36;">AWS Mapped</span></td>
+                                            <td class="text-right" style="color: #1565C0;">${formatVND(app.totalComputeVND + app.eksClusterFeeVND)}</td>
+                                            <td class="text-right" style="color: #FDB813;">${formatVND(app.totalStorageVND)}</td>
+                                            <td class="text-right" style="color: #8E24AA;">${formatVND(app.totalDataTransferVND || 0)}</td>
+                                            <td class="text-right" style="color: #005A36;">${formatVND(app.grandTotalAwsVND)}</td>
                                         </tr>
                                     </tbody>
                                 </table>
@@ -977,13 +1001,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const computePct = Math.round((app.totalComputeVND / app.grandTotalAwsVND) * 100) || 0;
             const dbPct = Math.round((app.totalDatabaseVND / app.grandTotalAwsVND) * 100) || 0;
             const storagePct = Math.round((app.totalStorageVND / app.grandTotalAwsVND) * 100) || 0;
-            const ancillaryPct = Math.round((app.totalAncillaryVND / app.grandTotalAwsVND) * 100) || 0;
+            const totalPhuTroVND = app.totalAncillaryVND + (app.totalDataTransferVND || 0);
+            const ancillaryPct = Math.round((totalPhuTroVND / app.grandTotalAwsVND) * 100) || 0;
 
             const recText = app.recommend ? "Nên đưa lên Cloud" : "Không nên đưa lên Cloud";
             const deltaAmtText = `${app.deltaVND <= 0 ? 'Giảm' : 'Tăng'} ${Math.abs(app.deltaVND).toLocaleString()}đ`;
             const deltaPctText = `${app.deltaVND <= 0 ? '-' : '+'}${Math.abs(app.deltaPct).toFixed(2)}%`;
 
-            const serviceBreakdown = `Compute: ${app.totalComputeVND.toLocaleString()}đ (${computePct}%), DB: ${app.totalDatabaseVND.toLocaleString()}đ (${dbPct}%), Storage: ${app.totalStorageVND.toLocaleString()}đ (${storagePct}%), Phụ trợ: ${app.totalAncillaryVND.toLocaleString()}đ (${ancillaryPct}%)`;
+            const serviceBreakdown = `Compute: ${app.totalComputeVND.toLocaleString()}đ (${computePct}%), DB: ${app.totalDatabaseVND.toLocaleString()}đ (${dbPct}%), Storage: ${app.totalStorageVND.toLocaleString()}đ (${storagePct}%), Phụ trợ: ${totalPhuTroVND.toLocaleString()}đ (${ancillaryPct}%)`;
 
             return {
                 "STT": index + 1,
@@ -1015,9 +1040,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     "CPU": comp.cpu,
                     "RAM (GB)": comp.ram,
                     "Storage (GB)": comp.storage,
+                    "Data Transfer Out (GB)": comp.dataTransferOut || 0,
                     "AWS Dịch vụ quy đổi": comp.matchedInstanceCount === 1 ? comp.matchedInstance : `${comp.matchedInstanceCount} x ${comp.matchedInstance}`,
                     "Phí AWS Compute / Năm (VND)": Math.round(comp.yearlyComputeCostVND),
                     "Phí AWS Storage / Năm (VND)": Math.round(comp.yearlyStorageCostVND),
+                    "Phí AWS Data Transfer / Năm (VND)": Math.round(comp.yearlyDataTransferCostVND || 0),
                     "Tổng chi phí AWS Cấu phần / Năm (VND)": Math.round(comp.totalYearlyCostVND)
                 });
             });
@@ -1054,9 +1081,11 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 8 },   // CPU
             { wch: 12 },  // RAM
             { wch: 14 },  // Storage
+            { wch: 22 },  // Data Transfer Out (GB)
             { wch: 25 },  // AWS Dịch vụ quy đổi
             { wch: 28 },  // Phí AWS Compute
             { wch: 28 },  // Phí AWS Storage
+            { wch: 32 },  // Phí AWS Data Transfer
             { wch: 32 }   // Tổng chi phí
         ];
         XLSX.utils.book_append_sheet(wb, wsDetail, "Chi_tiet_cau_phan");
@@ -1387,6 +1416,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const elStorageEbs = document.getElementById('pricing-storage-ebs');
         const elStorageRds = document.getElementById('pricing-storage-rds');
         const elStorageMsk = document.getElementById('pricing-storage-msk');
+        const elDto = document.getElementById('pricing-data-transfer-out');
 
         if (elUsdVnd) USD_TO_VND = parseInt(elUsdVnd.value, 10) || 26000;
 
@@ -1394,6 +1424,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const ebsVal = parseFloat(elStorageEbs?.value || "9.60") / 100;
         const rdsVal = parseFloat(elStorageRds?.value || "13.80") / 100;
         const mskVal = parseFloat(elStorageMsk?.value || "10.00") / 100;
+        const dtoVal = parseFloat(elDto?.value || "0.12");
+
+        INSTANCE_CATALOG.dataTransferOutRate = dtoVal;
 
         const regions = ['us-east-1', 'ap-southeast-1', 'ap-northeast-1', 'eu-central-1'];
         regions.forEach(r => {
@@ -1449,11 +1482,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const elStorageEbs = document.getElementById('pricing-storage-ebs');
             const elStorageRds = document.getElementById('pricing-storage-rds');
             const elStorageMsk = document.getElementById('pricing-storage-msk');
+            const elDto = document.getElementById('pricing-data-transfer-out');
 
             if (elUsdVnd) elUsdVnd.value = "26000";
             if (elStorageEbs) elStorageEbs.value = "9.60";
             if (elStorageRds) elStorageRds.value = "13.80";
             if (elStorageMsk) elStorageMsk.value = "10.00";
+            if (elDto) elDto.value = "0.12";
 
             renderPricingTables();
             recalculateAll();
@@ -1542,11 +1577,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const elStorageEbs = document.getElementById('pricing-storage-ebs');
         const elStorageRds = document.getElementById('pricing-storage-rds');
         const elStorageMsk = document.getElementById('pricing-storage-msk');
+        const elDto = document.getElementById('pricing-data-transfer-out');
 
         if (elUsdVnd) elUsdVnd.value = USD_TO_VND;
         if (elStorageEbs) elStorageEbs.value = (INSTANCE_CATALOG.storage.ebs['us-east-1'] * 100).toFixed(2);
         if (elStorageRds) elStorageRds.value = (INSTANCE_CATALOG.storage.rds['us-east-1'] * 100).toFixed(2);
         if (elStorageMsk) elStorageMsk.value = (INSTANCE_CATALOG.storage.msk['us-east-1'] * 100).toFixed(2);
+        if (elDto) {
+            elDto.value = (INSTANCE_CATALOG.dataTransferOutRate !== undefined ? INSTANCE_CATALOG.dataTransferOutRate : 0.12).toFixed(2);
+        }
 
         // Render tables
         renderPricingTables();
