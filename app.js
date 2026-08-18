@@ -44,6 +44,98 @@ document.addEventListener('DOMContentLoaded', () => {
     let sortPortfolio;
     let updateHeaderSortUI;
 
+    // Group mappings and properties
+    const DEFAULT_GROUP_INFO = {
+        "N1": {
+            code: "N1",
+            name: "N1 — Ứng dụng web, quản trị nội bộ",
+            stability: "Mức 4 (Rất ổn định)",
+            performance: "Mức 3 (Đáp ứng cao hơn yêu cầu nghiệp vụ.)",
+            stabilityAbbr: "M4",
+            performanceAbbr: "M3",
+            dbChangeRate: 5
+        },
+        "N2": {
+            code: "N2",
+            name: "N2 — Kênh khách hàng, tác nghiệp phụ thuộc Core",
+            stability: "Mức 2 (Cơ bản ổn định)",
+            performance: "Mức 1 (Không đáp ứng yêu cầu nghiệp vụ)",
+            stabilityAbbr: "M2",
+            performanceAbbr: "M1",
+            dbChangeRate: 10
+        },
+        "N3": {
+            code: "N3",
+            name: "N3 — Thanh toán, thẻ, chứng khoán, ký số",
+            stability: "Mức 1 (Không ổn định)",
+            performance: "Mức 1 (Không đáp ứng yêu cầu nghiệp vụ)",
+            stabilityAbbr: "M1",
+            performanceAbbr: "M1",
+            dbChangeRate: 15
+        },
+        "N4": {
+            code: "N4",
+            name: "N4 — Dữ liệu, báo cáo, xử lý theo lô",
+            stability: "Mức 4 nếu dữ liệu đi cùng; mức 1 nếu dữ liệu ở lại on-prem",
+            performance: "Mức 3 nếu dữ liệu đi cùng; mức 1 nếu dữ liệu ở lại on-prem",
+            stabilityAbbr: "M4/M1",
+            performanceAbbr: "M3/M1",
+            dbChangeRate: 20
+        },
+        "N5": {
+            code: "N5",
+            name: "N5 — Nền tảng xác thực, tích hợp dùng chung",
+            stability: "Mức 2 nếu chuyển trước các ứng dụng; mức 4 nếu chuyển sau phần lớn ứng dụng",
+            performance: "Mức 1 (Không đáp ứng yêu cầu nghiệp vụ) nếu chuyển trước; mức 3 nếu chuyển sau",
+            stabilityAbbr: "M2/M4",
+            performanceAbbr: "M1/M3",
+            dbChangeRate: 8
+        },
+        "N6": {
+            code: "N6",
+            name: "N6 — Phần mềm thương mại đóng gói",
+            stability: "Mức 3 nếu được hãng chứng nhận hỗ trợ; mức 1 (Không đáp ứng yêu cầu nghiệp vụ) nếu không được hỗ trợ",
+            performance: "Mức 2 (Cơ bản ổn định)",
+            stabilityAbbr: "M3/M1",
+            performanceAbbr: "M2",
+            dbChangeRate: 5
+        },
+        "N7": {
+            code: "N7",
+            name: "N7 — AI và GenAI",
+            stability: "Mức 4 (Rất ổn định)",
+            performance: "Mức 3 (Đáp ứng cao hơn yêu cầu nghiệp vụ.)",
+            stabilityAbbr: "M4",
+            performanceAbbr: "M3",
+            dbChangeRate: 12
+        }
+    };
+
+    let GROUP_INFO = JSON.parse(JSON.stringify(DEFAULT_GROUP_INFO));
+
+    const DEFAULT_COMPLEXITY_INFO = [
+        { level: "Mức 1", minComp: 1, maxComp: 5, mandays: 135, note: "Độ phức tạp thấp nhất" },
+        { level: "Mức 2", minComp: 6, maxComp: 9, mandays: 270, note: "Độ phức tạp trung bình thấp" },
+        { level: "Mức 3", minComp: 10, maxComp: 19, mandays: 400, note: "Độ phức tạp trung bình" },
+        { level: "Mức 4", minComp: 20, maxComp: 39, mandays: 800, note: "Độ phức tạp trung bình cao" },
+        { level: "Mức 5", minComp: 40, maxComp: 9999, mandays: 1000, note: "Độ phức tạp cao nhất" }
+    ];
+
+    const DEFAULT_MANDAY_RATE = 2000000;
+
+    let COMPLEXITY_INFO = [];
+    let MANDAY_RATE = DEFAULT_MANDAY_RATE;
+
+    const normalizeGroup = (groupStr) => {
+        if (!groupStr) return "N1";
+        const clean = String(groupStr).trim().toUpperCase();
+        const match = clean.match(/^(N[1-7])/i);
+        if (match) {
+            return match[1];
+        }
+        return "N1";
+    };
+
     // 3. DEFAULT STATIC AWS PRICING CATALOG (Fallback reference)
     const DEFAULT_INSTANCE_CATALOG = {
         ec2: [
@@ -309,22 +401,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. EXCEL EXPORTER / TEMPLATE GENERATOR
     const downloadTemplate = () => {
         const headers = [
-            "STT", "Mã PM", "Tên PM", "Đơn vị đầu mối nghiệp vụ", 
+            "STT", "Mã PM", "Tên PM", "Đơn vị đầu mối nghiệp vụ", "Phân nhóm", 
             "Chi phí hạ tầng được phân bổ 1 năm", "Tên cấu phần", 
             "CPU", "RAM (GB)", "Storage (GB)", "Data Transfer Out (GB)"
         ];
 
         // High fidelity sample data to help user understand the formatting
         const sampleRows = [
-            [1, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", 650000000, "Web Server Cluster", 4, 8, 150, 100],
-            [2, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", 650000000, "Database Postgres High-Availability", 16, 64, 1500, 500],
-            [3, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", 120000000, "Nền tảng CMS Frontend", 2, 4, 50, 50],
-            [4, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", 120000000, "Cơ sở dữ liệu người dùng SQL", 4, 16, 250, 150],
-            [5, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", 90000000, "API Gateway & Application Server", 2, 4, 30, 20],
-            [6, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", 90000000, "Database HRM Postgres", 2, 8, 80, 40],
-            [7, "PM-04", "Ứng dụng Di động m-Banking", "Khối Ngân hàng Số", 180000000, "Microservices Application Engine", 12, 24, 200, 300],
-            [8, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", 1200000000, "Spark/BI Data Processing Node", 32, 128, 500, 1000],
-            [9, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", 1200000000, "Data Warehouse Postgres Analytics", 64, 256, 4000, 2000]
+            [1, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", "N1 — Ứng dụng web, quản trị nội bộ", 650000000, "Web Server Cluster", 4, 8, 150, 100],
+            [2, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", "N1 — Ứng dụng web, quản trị nội bộ", 650000000, "Database Postgres High-Availability", 16, 64, 1500, 500],
+            [3, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", "N2 — Kênh khách hàng, tác nghiệp phụ thuộc Core", 120000000, "Nền tảng CMS Frontend", 2, 4, 50, 50],
+            [4, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", "N2 — Kênh khách hàng, tác nghiệp phụ thuộc Core", 120000000, "Cơ sở dữ liệu người dùng SQL", 4, 16, 250, 150],
+            [5, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", "N6 — Phần mềm thương mại đóng gói", 90000000, "API Gateway & Application Server", 2, 4, 30, 20],
+            [6, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", "N6 — Phần mềm thương mại đóng gói", 90000000, "Database HRM Postgres", 2, 8, 80, 40],
+            [7, "PM-04", "Ứng dụng Di động m-Banking", "Khối Ngân hàng Số", "N3 — Thanh toán, thẻ, chứng khoán, ký số", 180000000, "Microservices Application Engine", 12, 24, 200, 300],
+            [8, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", "N4 — Dữ liệu, báo cáo, xử lý theo lô", 1200000000, "Spark/BI Data Processing Node", 32, 128, 500, 1000],
+            [9, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", "N4 — Dữ liệu, báo cáo, xử lý theo lô", 1200000000, "Data Warehouse Postgres Analytics", 64, 256, 4000, 2000]
         ];
 
         // Build workbook
@@ -338,6 +430,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 10 }, // Mã PM
             { wch: 35 }, // Tên PM
             { wch: 30 }, // Đơn vị nghiệp vụ
+            { wch: 30 }, // Phân nhóm
             { wch: 32 }, // Chi phí On-Prem
             { wch: 35 }, // Tên cấu phần
             { wch: 8 },  // CPU
@@ -434,12 +527,14 @@ document.addEventListener('DOMContentLoaded', () => {
         let lastSeenName = "";
         let lastSeenOwner = "";
         let lastSeenOnPremStr = "0";
+        let lastSeenGroup = "";
 
         rows.forEach((row) => {
             // Read values using fuzzy header matcher
             const rawStt = getRowValue(row, ["stt", "no", "no.", "thu tu"]);
             let rawCode = String(getRowValue(row, ["ma pm", "ma phan mem", "app code", "pm code", "ma_pm"]) || "").trim();
             let rawName = String(getRowValue(row, ["ten pm", "ten phan mem", "app name", "pm name", "ten_pm"]) || "").trim();
+            let rawGroup = String(getRowValue(row, ["phan nhom", "nhom", "app group", "group"]) || "").trim();
             let rawOwner = String(getRowValue(row, ["don vi dau moi nghiep vu", "dau moi", "nghiep vu", "chu so huu", "business owner", "owner", "don vi"]) || "").trim();
             let rawOnPremStr = String(getRowValue(row, ["chi phi ha tang duoc phan bo 1 nam", "chi phi ha tang", "chi phi 1 nam", "on-prem cost", "onprem cost", "budget", "chi phi"]) || "");
             const rawCompName = String(getRowValue(row, ["ten cau phan", "cau phan", "component name", "component", "device", "ten thiet bi"]) || "").trim();
@@ -458,12 +553,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 rawCode = lastSeenCode;
                 rawName = lastSeenName;
                 rawOwner = lastSeenOwner;
+                rawGroup = lastSeenGroup;
                 if (!rawOnPremStr) rawOnPremStr = lastSeenOnPremStr;
             } else {
                 // Keep record of last valid application header values
                 if (rawCode) lastSeenCode = rawCode;
                 if (rawName) lastSeenName = rawName;
                 if (rawOwner) lastSeenOwner = rawOwner;
+                if (rawGroup) lastSeenGroup = rawGroup;
                 if (rawOnPremStr) lastSeenOnPremStr = rawOnPremStr;
             }
 
@@ -475,11 +572,13 @@ document.addEventListener('DOMContentLoaded', () => {
             const appKey = rawCode || rawName;
 
             if (!appMap[appKey]) {
+                const normGroup = normalizeGroup(rawGroup);
                 appMap[appKey] = {
                     maPM: rawCode || "PM-N/A",
                     tenPM: rawName || "Ứng dụng chưa đặt tên",
                     owner: rawOwner || "Chưa xác định",
                     onPremCost: cleanedOnPrem,
+                    phanNhom: normGroup,
                     components: []
                 };
             }
@@ -541,6 +640,13 @@ document.addEventListener('DOMContentLoaded', () => {
         const region = elAwsRegion.value;
         const plan = elAwsPlan.value;
         const ancillaryPct = parseFloat(elAncillaryPct.value);
+        
+        // Compliance backup checkbox status
+        const elComplianceBackup = document.getElementById('compliance-realtime-backup');
+        const isRealtimeBackup = elComplianceBackup ? elComplianceBackup.checked : false;
+
+        const elMigrationCost = document.getElementById('compliance-migration-cost');
+        const isMigrationCostActive = elMigrationCost ? elMigrationCost.checked : false;
 
         // Get Plan discount multiplier
         let discountMultiplier = 1.0;
@@ -555,6 +661,9 @@ document.addEventListener('DOMContentLoaded', () => {
             let totalDatabaseUSD = 0;
             let totalStorageUSD = 0;
             let totalDataTransferUSD = 0;
+            let totalReplicationComputeVND = 0;
+            let totalReplicationDtoVND = 0;
+            let totalRealtimeReplicationVND = 0;
             let hasCompute = false;
 
             const calculatedComponents = app.components.map((comp) => {
@@ -573,7 +682,41 @@ document.addEventListener('DOMContentLoaded', () => {
                 // Data Transfer Out cost
                 const yearlyDataTransferUSD = (comp.dataTransferOut || 0) * dtoRate * 12;
 
+                // Compliance replication calculation (only database i.e. rds)
+                let realtimeReplicationCostVND = 0;
+                let ec2ReplicationVND = 0;
+                let dmsReplicationVND = 0;
+                let dtoReplicationVND = 0;
+
+                if (isRealtimeBackup && comp.serviceType === 'rds') {
+                    // 1. EC2 equivalent
+                    const ec2Matched = matchInstance('ec2', comp.cpu, comp.ram, region);
+                    const ec2HourlyRate = ec2Matched.rate * ec2Matched.count * discountMultiplier;
+                    const ec2YearlyUSD = ec2HourlyRate * 24 * 365;
+                    ec2ReplicationVND = ec2YearlyUSD * USD_TO_VND;
+
+                    // 2. DMS sizing DMS = 1/4 sizing of database
+                    const dmsMatched = matchInstance('dms', comp.cpu / 4, comp.ram / 4, region);
+                    const dmsHourlyRate = dmsMatched.rate * dmsMatched.count * discountMultiplier;
+                    const dmsYearlyUSD = dmsHourlyRate * 24 * 365;
+                    dmsReplicationVND = dmsYearlyUSD * USD_TO_VND;
+
+                    // 3. DTO: Tỷ lệ thay đổi/ngày (%DB) * dung lượng database * 30 ngày
+                    const dbChangeRatePct = (GROUP_INFO[app.phanNhom || 'N1'] || GROUP_INFO['N1']).dbChangeRate / 100;
+                    const monthlyDmsDtoGB = dbChangeRatePct * comp.storage * 30;
+                    const yearlyDmsDtoUSD = monthlyDmsDtoGB * dtoRate * 12;
+                    dtoReplicationVND = yearlyDmsDtoUSD * USD_TO_VND;
+
+                    realtimeReplicationCostVND = ec2ReplicationVND + dmsReplicationVND + dtoReplicationVND;
+
+                    // Accumulate replication totals
+                    totalReplicationComputeVND += ec2ReplicationVND + dmsReplicationVND;
+                    totalReplicationDtoVND += dtoReplicationVND;
+                    totalRealtimeReplicationVND += realtimeReplicationCostVND;
+                }
+
                 const componentYearlyTotalUSD = yearlyComputeUSD + yearlyStorageUSD + yearlyDataTransferUSD;
+                const totalYearlyCostVND = (componentYearlyTotalUSD * USD_TO_VND) + realtimeReplicationCostVND;
 
                 // Sum up aggregates
                 totalBaseAwsUSD += componentYearlyTotalUSD;
@@ -594,7 +737,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     yearlyComputeCostVND: yearlyComputeUSD * USD_TO_VND,
                     yearlyStorageCostVND: yearlyStorageUSD * USD_TO_VND,
                     yearlyDataTransferCostVND: yearlyDataTransferUSD * USD_TO_VND,
-                    totalYearlyCostVND: componentYearlyTotalUSD * USD_TO_VND
+                    realtimeReplicationCostVND,
+                    ec2ReplicationVND,
+                    dmsReplicationVND,
+                    dtoReplicationVND,
+                    totalYearlyCostVND
                 };
             });
 
@@ -612,13 +759,30 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalAncillaryUSD = totalBaseAwsUSD * (ancillaryPct / 100);
             const totalAncillaryVND = totalAncillaryUSD * USD_TO_VND;
 
+            // Migration complexity assessment and mandays lookup
+            const numComponents = app.components.length;
+            let matchedComplexity = COMPLEXITY_INFO.find(item => numComponents >= item.minComp && numComponents <= item.maxComp);
+            if (!matchedComplexity && numComponents > 0) {
+                matchedComplexity = COMPLEXITY_INFO[COMPLEXITY_INFO.length - 1];
+            }
+            const migrationMandays = numComponents > 0 ? (matchedComplexity ? matchedComplexity.mandays : 0) : 0;
+            const complexityLevel = numComponents > 0 ? (matchedComplexity ? matchedComplexity.level : "Không xác định") : "Không có";
+            const migrationCostVND = isMigrationCostActive ? (migrationMandays * MANDAY_RATE) : 0;
+
             // Grand total
             const grandTotalAwsUSD = totalBaseAwsUSD + totalAncillaryUSD;
-            const grandTotalAwsVND = grandTotalAwsUSD * USD_TO_VND;
+            const grandTotalAwsVND = (grandTotalAwsUSD * USD_TO_VND) + totalRealtimeReplicationVND + migrationCostVND;
 
             // Deltas
             const deltaVND = grandTotalAwsVND - app.onPremCost;
             const deltaPct = app.onPremCost > 0 ? (deltaVND / app.onPremCost) * 100 : 0;
+
+            // Get stability & performance properties from Group dictionary
+            const grp = GROUP_INFO[app.phanNhom || "N1"] || GROUP_INFO["N1"];
+            const stability = grp.stability;
+            const performance = grp.performance;
+            const stabilityAbbr = grp.stabilityAbbr || "M1";
+            const performanceAbbr = grp.performanceAbbr || "M1";
 
             // Default algorithmic recommendation: Nên if within 15% delta threshold
             const defaultRecommend = grandTotalAwsVND <= (app.onPremCost * 1.15);
@@ -629,13 +793,23 @@ document.addEventListener('DOMContentLoaded', () => {
                 components: calculatedComponents,
                 eksClusterFeeVND,
                 totalAncillaryVND,
-                totalDataTransferVND: totalDataTransferUSD * USD_TO_VND,
+                totalDataTransferVND: (totalDataTransferUSD * USD_TO_VND) + totalReplicationDtoVND,
                 grandTotalAwsVND,
                 totalComputeVND: totalComputeUSD * USD_TO_VND,
-                totalDatabaseVND: totalDatabaseUSD * USD_TO_VND,
+                totalDatabaseVND: (totalDatabaseUSD * USD_TO_VND) + totalReplicationComputeVND,
                 totalStorageVND: totalStorageUSD * USD_TO_VND,
+                totalReplicationComputeVND,
+                totalReplicationDtoVND,
+                totalRealtimeReplicationVND,
+                migrationMandays,
+                migrationCostVND,
+                complexityLevel,
                 deltaVND,
                 deltaPct,
+                stability,
+                performance,
+                stabilityAbbr,
+                performanceAbbr,
                 // Recommendations (allow local overrides)
                 recommend: defaultRecommend,
                 isOverridden: false
@@ -704,7 +878,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filtered.length === 0) {
             elTableBody.innerHTML = `
                 <tr>
-                    <td colspan="11" class="empty-table-state">
+                    <td colspan="14" class="empty-table-state">
                         <div class="empty-state-content">
                             <i data-lucide="search"></i>
                             <h4>Không tìm thấy kết quả</h4>
@@ -734,7 +908,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Recommendation Badge
             const recClass = app.recommend ? 'rec-should' : 'rec-should-not';
             const recIcon = app.recommend ? 'check-circle' : 'alert-triangle';
-            const recLabel = app.recommend ? 'Nên đưa lên Cloud' : 'Không nên đưa lên Cloud';
+            const recLabel = app.recommend ? 'Có' : 'Không';
 
             // HTML Master Row
             const trMain = document.createElement('tr');
@@ -745,6 +919,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td><span class="pm-code">${app.maPM}</span></td>
                 <td><strong>${app.tenPM}</strong></td>
                 <td><span class="biz-owner">${app.owner}</span></td>
+                <td><span class="group-badge group-${app.phanNhom}" title="${GROUP_INFO[app.phanNhom].name}">${app.phanNhom}</span></td>
                 <td class="text-right cost-bold-yellow">${formatVND(app.onPremCost)}</td>
                 <td class="text-right cost-bold-green">${formatVND(app.grandTotalAwsVND)}</td>
                 <td>
@@ -767,6 +942,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="text-right">
                     <span class="delta-pct ${deltaClass}" style="font-weight: 700; font-size: 0.85rem; font-family: var(--font-display);">${pctText}</span>
                 </td>
+                <td style="text-align: center;"><span class="text-subtle-desc cursor-help" title="${app.stability}">${app.stabilityAbbr}</span></td>
+                <td style="text-align: center;"><span class="text-subtle-desc cursor-help" title="${app.performance}">${app.performanceAbbr}</span></td>
                 <td style="text-align: center;">
                     <span class="recommendation-badge ${recClass}">
                         ${recLabel}
@@ -782,7 +959,7 @@ document.addEventListener('DOMContentLoaded', () => {
             trDetail.className = 'detail-row';
             trDetail.style.display = 'none'; // Initially hidden
             trDetail.innerHTML = `
-                <td colspan="11">
+                <td colspan="14">
                     <div class="detail-drawer-container">
                         <div class="drawer-grid">
                             <div class="components-table-block">
@@ -819,8 +996,23 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 <td class="text-right cost-bold-blue">${formatVND(comp.yearlyComputeCostVND)}</td>
                                                 <td class="text-right cost-bold-yellow">${formatVND(comp.yearlyStorageCostVND)}</td>
                                                 <td class="text-right cost-bold-purple" style="color: #8E24AA !important;">${formatVND(comp.yearlyDataTransferCostVND || 0)}</td>
-                                                <td class="text-right cost-bold-green">${formatVND(comp.totalYearlyCostVND)}</td>
+                                                <td class="text-right cost-bold-green">${formatVND(comp.totalYearlyCostVND - (comp.realtimeReplicationCostVND || 0))}</td>
                                             </tr>
+                                            ${comp.realtimeReplicationCostVND > 0 ? `
+                                                <tr style="background: rgba(0, 90, 54, 0.015);">
+                                                    <td style="padding-left: 20px;"><i data-lucide="corner-down-right" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 5px; color: var(--primary-color);"></i> <span style="font-size: 0.76rem; color: var(--text-muted);">Bản sao cập nhật real-time VN cho <strong>${comp.name}</strong></span></td>
+                                                    <td><span class="service-pill" style="background: rgba(0, 90, 54, 0.05); color: var(--primary-color); border: 1px solid rgba(0, 90, 54, 0.1);">Replication (VN)</span></td>
+                                                    <td class="text-right">-</td>
+                                                    <td class="text-right">-</td>
+                                                    <td class="text-right">-</td>
+                                                    <td class="text-right">-</td>
+                                                    <td><span class="instance-code" title="EC2 Sizing tương đương + DMS 1/4 Sizing + DTO %DB">EC2 + DMS + DTO</span></td>
+                                                    <td class="text-right cost-bold-blue" title="EC2: ${formatVND(comp.ec2ReplicationVND)} + DMS: ${formatVND(comp.dmsReplicationVND)}">${formatVND(comp.ec2ReplicationVND + comp.dmsReplicationVND)}</td>
+                                                    <td class="text-right">-</td>
+                                                    <td class="text-right cost-bold-purple" title="DTO %DB: ${formatVND(comp.dtoReplicationVND)}" style="color: #8E24AA !important;">${formatVND(comp.dtoReplicationVND)}</td>
+                                                    <td class="text-right cost-bold-green" style="font-weight: 600;">${formatVND(comp.realtimeReplicationCostVND)}</td>
+                                                </tr>
+                                            ` : ''}
                                         `).join('')}
                                         ${app.eksClusterFeeVND > 0 ? `
                                             <tr>
@@ -850,10 +1042,30 @@ document.addEventListener('DOMContentLoaded', () => {
                                             <td class="text-right">-</td>
                                             <td class="text-right cost-bold-green">${formatVND(app.totalAncillaryVND)}</td>
                                         </tr>
-                                        <tr style="background: rgba(0, 90, 54, 0.04); font-weight:700;">
+                                        ${app.totalRealtimeReplicationVND > 0 ? `
+                                            <tr style="background: rgba(0, 90, 54, 0.02); font-weight:600;">
+                                                <td colspan="6">Trong đó: Phí tuân thủ sao lưu Việt Nam (Real-time)</td>
+                                                <td><span class="instance-code" style="color: var(--primary-color);">Compliance</span></td>
+                                                <td class="text-right" style="color: #1565C0;">${formatVND(app.totalReplicationComputeVND)}</td>
+                                                <td class="text-right">-</td>
+                                                <td class="text-right" style="color: #8E24AA;">${formatVND(app.totalReplicationDtoVND)}</td>
+                                                <td class="text-right" style="color: var(--primary-color);">${formatVND(app.totalRealtimeReplicationVND)}</td>
+                                            </tr>
+                                        ` : ''}
+                                         ${app.migrationCostVND > 0 ? `
+                                             <tr style="background: rgba(0, 90, 54, 0.02); font-weight:600;">
+                                                 <td colspan="6">Chi phí chuyển đổi (Migration Mandays: <strong>${app.migrationMandays} ngày công</strong>)</td>
+                                                 <td><span class="instance-code" style="color: var(--primary-color);">${app.complexityLevel}</span></td>
+                                                 <td class="text-right">-</td>
+                                                 <td class="text-right">-</td>
+                                                 <td class="text-right">-</td>
+                                                 <td class="text-right" style="color: var(--primary-color); font-weight: 700;">${formatVND(app.migrationCostVND)}</td>
+                                             </tr>
+                                         ` : ''}
+                                         <tr style="background: rgba(0, 90, 54, 0.04); font-weight:700;">
                                             <td colspan="6">Tổng cộng toàn bộ cấu phần ứng dụng</td>
                                             <td><span class="instance-code" style="color: #005A36;">AWS Mapped</span></td>
-                                            <td class="text-right" style="color: #1565C0;">${formatVND(app.totalComputeVND + app.eksClusterFeeVND)}</td>
+                                            <td class="text-right" style="color: #1565C0;">${formatVND(app.totalComputeVND + app.eksClusterFeeVND + app.totalReplicationComputeVND)}</td>
                                             <td class="text-right" style="color: #FDB813;">${formatVND(app.totalStorageVND)}</td>
                                             <td class="text-right" style="color: #8E24AA;">${formatVND(app.totalDataTransferVND || 0)}</td>
                                             <td class="text-right" style="color: #005A36;">${formatVND(app.grandTotalAwsVND)}</td>
@@ -912,7 +1124,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 app.recommend = checked;
                 const badge = trMain.querySelector('.recommendation-badge');
                 badge.className = `recommendation-badge ${checked ? 'rec-should' : 'rec-should-not'}`;
-                badge.innerHTML = `<i data-lucide="${checked ? 'check-circle' : 'alert-triangle'}" style="width:14px; height:14px;"></i> ${checked ? 'Nên đưa lên Cloud' : 'Không nên đưa lên Cloud'}`;
+                badge.innerHTML = `${checked ? 'Nên đưa lên Cloud' : 'Không nên đưa lên Cloud'}`;
                 const indicatorText = trDetail.querySelector('.rec-indicator-text');
                 indicatorText.className = `rec-indicator-text ${checked ? 'should' : 'shouldnot'}`;
                 indicatorText.innerText = `Khuyến nghị: ${checked ? 'NÊN DI TRÚ' : 'KHÔNG NÊN'}`;
@@ -1062,7 +1274,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const exportResultsToExcel = () => {
         if (processedPortfolio.length === 0) return;
 
-        // 1. Generate Summary Data for Sheet 1 (Exactly 9 columns requested)
+        // 1. Generate Summary Data for Sheet 1
         const summaryData = processedPortfolio.map((app, index) => {
             const computePct = Math.round((app.totalComputeVND / app.grandTotalAwsVND) * 100) || 0;
             const dbPct = Math.round((app.totalDatabaseVND / app.grandTotalAwsVND) * 100) || 0;
@@ -1070,7 +1282,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const totalPhuTroVND = app.totalAncillaryVND + (app.totalDataTransferVND || 0);
             const ancillaryPct = Math.round((totalPhuTroVND / app.grandTotalAwsVND) * 100) || 0;
 
-            const recText = app.recommend ? "Nên đưa lên Cloud" : "Không nên đưa lên Cloud";
+            const recText = app.recommend ? "Có" : "Không";
             const deltaAmtText = `${app.deltaVND <= 0 ? 'Giảm' : 'Tăng'} ${Math.abs(app.deltaVND).toLocaleString()}đ`;
             const deltaPctText = `${app.deltaVND <= 0 ? '-' : '+'}${Math.abs(app.deltaPct).toFixed(2)}%`;
 
@@ -1081,12 +1293,19 @@ document.addEventListener('DOMContentLoaded', () => {
                 "Mã PM": app.maPM,
                 "Tên PM": app.tenPM,
                 "Đơn vị đầu mối nghiệp vụ": app.owner,
-                "Chi phí hạ tầng được phân bổ 1 năm": Math.round(app.onPremCost),
+                "Phân nhóm": GROUP_INFO[app.phanNhom].name,
+                "Chi phí hạ tầng được phân bỏ 1 năm": Math.round(app.onPremCost),
                 "Chi phí trên AWS Cloud trong 1 năm": Math.round(app.grandTotalAwsVND),
+                "Phí tuân thủ sao lưu Việt Nam (VND)": Math.round(app.totalRealtimeReplicationVND || 0),
+                "Mức độ phức tạp": app.complexityLevel,
+                "Số ngày công chuyển đổi (Mandays)": app.migrationMandays,
+                "Chi phí chuyển đổi (VND)": Math.round(app.migrationCostVND || 0),
                 "Số tiền/Tỷ lệ % dịch vụ": serviceBreakdown,
                 "Số tiền tăng/giảm": deltaAmtText,
                 "Tỷ lệ tăng/giảm": deltaPctText,
-                "Đề xuất (Nên/không nên đưa lên Cloud)": recText
+                "Độ ổn định": app.stability,
+                "Hiệu năng": app.performance,
+                "Đề xuất đưa lên Cloud": recText
             };
         });
 
@@ -1101,8 +1320,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     "Mã PM": app.maPM,
                     "Tên PM": app.tenPM,
                     "Đơn vị đầu mối nghiệp vụ": app.owner,
+                    "Phân nhóm": GROUP_INFO[app.phanNhom].name,
+                    "Độ ổn định": app.stability,
+                    "Hiệu năng": app.performance,
                     "Tên cấu phần": comp.name,
-                    "Loại cấu phần": comp.serviceType === 'rds' ? "RDS Postgres" : (comp.serviceType === 'msk' ? "MSK Kafka" : "EKS/EC2"),
+                    "Loại cấu phần": comp.serviceType === 'rds' ? "RDS Postgres" : (comp.serviceType === 'msk' ? "MSK Kafka" : (comp.serviceType === 'dms' ? "DMS Migration" : "EKS/EC2")),
                     "CPU": comp.cpu,
                     "RAM (GB)": comp.ram,
                     "Storage (GB)": comp.storage,
@@ -1111,6 +1333,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     "Phí AWS Compute / Năm (VND)": Math.round(comp.yearlyComputeCostVND),
                     "Phí AWS Storage / Năm (VND)": Math.round(comp.yearlyStorageCostVND),
                     "Phí AWS Data Transfer / Năm (VND)": Math.round(comp.yearlyDataTransferCostVND || 0),
+                    "Phí tuân thủ sao lưu Việt Nam (VND)": Math.round(comp.realtimeReplicationCostVND || 0),
                     "Tổng chi phí AWS Cấu phần / Năm (VND)": Math.round(comp.totalYearlyCostVND)
                 });
             });
@@ -1126,11 +1349,18 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 12 },  // Mã PM
             { wch: 30 },  // Tên PM
             { wch: 25 },  // Đơn vị đầu mối nghiệp vụ
+            { wch: 35 },  // Phân nhóm
             { wch: 35 },  // Chi phí hạ tầng được phân bổ 1 năm
             { wch: 35 },  // Chi phí trên AWS Cloud trong 1 năm
+            { wch: 35 },  // Phí tuân thủ sao lưu Việt Nam (VND)
+            { wch: 25 },  // Mức độ phức tạp
+            { wch: 30 },  // Số ngày công chuyển đổi (Mandays)
+            { wch: 25 },  // Chi phí chuyển đổi (VND)
             { wch: 80 },  // Số tiền/Tỷ lệ % dịch vụ
             { wch: 25 },  // Số tiền tăng/giảm
             { wch: 20 },  // Tỷ lệ tăng/giảm
+            { wch: 45 },  // Độ ổn định
+            { wch: 45 },  // Hiệu năng
             { wch: 30 }   // Đề xuất
         ];
         XLSX.utils.book_append_sheet(wb, wsSummary, "Tong_hop_PM");
@@ -1142,6 +1372,9 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 12 },  // Mã PM
             { wch: 30 },  // Tên PM
             { wch: 25 },  // Đơn vị đầu mối nghiệp vụ
+            { wch: 35 },  // Phân nhóm
+            { wch: 45 },  // Độ ổn định
+            { wch: 45 },  // Hiệu năng
             { wch: 30 },  // Tên cấu phần
             { wch: 15 },  // Loại cấu phần
             { wch: 8 },   // CPU
@@ -1152,6 +1385,7 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 28 },  // Phí AWS Compute
             { wch: 28 },  // Phí AWS Storage
             { wch: 32 },  // Phí AWS Data Transfer
+            { wch: 35 },  // Phí tuân thủ sao lưu Việt Nam (VND)
             { wch: 32 }   // Tổng chi phí
         ];
         XLSX.utils.book_append_sheet(wb, wsDetail, "Chi_tiet_cau_phan");
@@ -1675,6 +1909,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         recalculateAll();
                     }
                 }
+                if (targetTabId === 'tab-parameters') {
+                    renderGroupParametersTable();
+                    renderComplexityTable();
+                }
             });
         });
     };
@@ -1700,6 +1938,196 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Render tables
         renderPricingTables();
+    };
+
+    const loadGroupParameters = () => {
+        try {
+            const savedGroups = localStorage.getItem('aws_estimator_groups');
+            if (savedGroups) {
+                GROUP_INFO = JSON.parse(savedGroups);
+                // Ensure dbChangeRate is set on all items, if missing
+                Object.keys(DEFAULT_GROUP_INFO).forEach(key => {
+                    if (!GROUP_INFO[key]) {
+                        GROUP_INFO[key] = JSON.parse(JSON.stringify(DEFAULT_GROUP_INFO[key]));
+                    }
+                    if (GROUP_INFO[key].dbChangeRate === undefined) {
+                        GROUP_INFO[key].dbChangeRate = DEFAULT_GROUP_INFO[key].dbChangeRate;
+                    }
+                });
+            } else {
+                GROUP_INFO = JSON.parse(JSON.stringify(DEFAULT_GROUP_INFO));
+            }
+        } catch (e) {
+            console.error("Failed to load group parameters from localStorage:", e);
+            GROUP_INFO = JSON.parse(JSON.stringify(DEFAULT_GROUP_INFO));
+        }
+    };
+
+    const saveGroupParameters = () => {
+        try {
+            localStorage.setItem('aws_estimator_groups', JSON.stringify(GROUP_INFO));
+        } catch (e) {
+            console.error("Failed to save group parameters to localStorage:", e);
+        }
+    };
+
+    const loadComplexityParameters = () => {
+        try {
+            const savedComplexity = localStorage.getItem('aws_estimator_complexity');
+            if (savedComplexity) {
+                COMPLEXITY_INFO = JSON.parse(savedComplexity);
+            } else {
+                COMPLEXITY_INFO = JSON.parse(JSON.stringify(DEFAULT_COMPLEXITY_INFO));
+            }
+
+            const savedMandayRate = localStorage.getItem('aws_estimator_manday_rate');
+            if (savedMandayRate) {
+                MANDAY_RATE = parseInt(savedMandayRate) || DEFAULT_MANDAY_RATE;
+            } else {
+                MANDAY_RATE = DEFAULT_MANDAY_RATE;
+            }
+        } catch (e) {
+            console.error("Failed to load complexity parameters:", e);
+            COMPLEXITY_INFO = JSON.parse(JSON.stringify(DEFAULT_COMPLEXITY_INFO));
+            MANDAY_RATE = DEFAULT_MANDAY_RATE;
+        }
+    };
+
+    const saveComplexityParameters = () => {
+        try {
+            localStorage.setItem('aws_estimator_complexity', JSON.stringify(COMPLEXITY_INFO));
+            localStorage.setItem('aws_estimator_manday_rate', MANDAY_RATE.toString());
+        } catch (e) {
+            console.error("Failed to save complexity parameters:", e);
+        }
+    };
+
+    const renderComplexityTable = () => {
+        const tbody = document.getElementById('table-complexity-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = COMPLEXITY_INFO.map((item, index) => {
+            return `
+                <tr data-index="${index}">
+                    <td style="text-align: center;"><strong class="pm-code" style="color: var(--primary-color);">${item.level}</strong></td>
+                    <td><input type="number" class="table-inline-input val-min-comp" value="${item.minComp}" min="0" style="width: 100%; text-align: center;"></td>
+                    <td><input type="number" class="table-inline-input val-max-comp" value="${item.maxComp}" min="0" style="width: 100%; text-align: center;"></td>
+                    <td><input type="number" class="table-inline-input val-mandays" value="${item.mandays}" min="0" style="width: 100%; text-align: center; font-weight: bold; color: var(--primary-color);"></td>
+                    <td><input type="text" class="table-inline-input val-note" value="${item.note}" style="width: 100%;"></td>
+                </tr>
+            `;
+        }).join('');
+
+        const elMandayRate = document.getElementById('param-manday-rate');
+        if (elMandayRate) {
+            elMandayRate.value = MANDAY_RATE;
+        }
+    };
+
+    const renderGroupParametersTable = () => {
+        const tbody = document.getElementById('table-parameters-body');
+        if (!tbody) return;
+
+        tbody.innerHTML = Object.keys(GROUP_INFO).map(key => {
+            const group = GROUP_INFO[key];
+            return `
+                <tr data-group-code="${group.code}">
+                    <td style="text-align: center;"><strong class="pm-code">${group.code}</strong></td>
+                    <td><input type="text" class="table-inline-input val-group-name" value="${group.name}" style="width: 100%;"></td>
+                    <td><input type="text" class="table-inline-input val-stability-abbr" value="${group.stabilityAbbr}" style="width: 100%; text-align: center; font-weight: bold;"></td>
+                    <td><input type="text" class="table-inline-input val-stability" value="${group.stability}" style="width: 100%;"></td>
+                    <td><input type="text" class="table-inline-input val-performance-abbr" value="${group.performanceAbbr}" style="width: 100%; text-align: center; font-weight: bold;"></td>
+                    <td><input type="text" class="table-inline-input val-performance" value="${group.performance}" style="width: 100%;"></td>
+                    <td>
+                        <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
+                            <input type="number" class="table-inline-input val-db-change-rate" value="${group.dbChangeRate}" min="0" max="100" step="0.1" style="width: 80px; text-align: right; padding-right: 5px;">
+                            <span style="font-weight: 600; color: var(--text-muted);">%</span>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+    };
+
+    const saveGroupParametersUI = () => {
+        const rows = document.querySelectorAll('#table-parameters-body tr');
+        rows.forEach(row => {
+            const code = row.getAttribute('data-group-code');
+            const name = row.querySelector('.val-group-name').value.trim();
+            const stabilityAbbr = row.querySelector('.val-stability-abbr').value.trim();
+            const stability = row.querySelector('.val-stability').value.trim();
+            const performanceAbbr = row.querySelector('.val-performance-abbr').value.trim();
+            const performance = row.querySelector('.val-performance').value.trim();
+            const dbChangeRate = parseFloat(row.querySelector('.val-db-change-rate').value) || 0;
+
+            if (GROUP_INFO[code]) {
+                GROUP_INFO[code].name = name;
+                GROUP_INFO[code].stabilityAbbr = stabilityAbbr;
+                GROUP_INFO[code].stability = stability;
+                GROUP_INFO[code].performanceAbbr = performanceAbbr;
+                GROUP_INFO[code].performance = performance;
+                GROUP_INFO[code].dbChangeRate = dbChangeRate;
+            }
+        });
+
+        // Read complexity parameters
+        const complexityRows = document.querySelectorAll('#table-complexity-body tr');
+        complexityRows.forEach(row => {
+            const index = parseInt(row.getAttribute('data-index'));
+            const minComp = parseInt(row.querySelector('.val-min-comp').value) || 0;
+            const maxComp = parseInt(row.querySelector('.val-max-comp').value) || 0;
+            const mandays = parseInt(row.querySelector('.val-mandays').value) || 0;
+            const note = row.querySelector('.val-note').value.trim();
+
+            if (COMPLEXITY_INFO[index]) {
+                COMPLEXITY_INFO[index].minComp = minComp;
+                COMPLEXITY_INFO[index].maxComp = maxComp;
+                COMPLEXITY_INFO[index].mandays = mandays;
+                COMPLEXITY_INFO[index].note = note;
+            }
+        });
+
+        // Read manday rate
+        const elMandayRate = document.getElementById('param-manday-rate');
+        if (elMandayRate) {
+            MANDAY_RATE = parseInt(elMandayRate.value) || DEFAULT_MANDAY_RATE;
+        }
+
+        saveGroupParameters();
+        saveComplexityParameters();
+        recalculateAll();
+        alert("Đã lưu và áp dụng toàn bộ tham số phân nhóm & mức độ phức tạp ứng dụng thành công!");
+    };
+
+    const resetGroupParametersUI = () => {
+        if (confirm("Bạn có chắc chắn muốn khôi phục toàn bộ các tham số phân nhóm & mức độ phức tạp về cấu hình mặc định ban đầu?")) {
+            localStorage.removeItem('aws_estimator_groups');
+            localStorage.removeItem('aws_estimator_complexity');
+            localStorage.removeItem('aws_estimator_manday_rate');
+            GROUP_INFO = JSON.parse(JSON.stringify(DEFAULT_GROUP_INFO));
+            loadComplexityParameters();
+            renderGroupParametersTable();
+            renderComplexityTable();
+            recalculateAll();
+            alert("Khôi phục toàn bộ tham số mặc định thành công!");
+        }
+    };
+
+    const initGroupParametersUI = () => {
+        loadGroupParameters();
+        loadComplexityParameters();
+        renderGroupParametersTable();
+        renderComplexityTable();
+
+        const btnSaveGroups = document.getElementById('btn-save-groups');
+        const btnResetGroups = document.getElementById('btn-reset-groups');
+
+        if (btnSaveGroups) {
+            btnSaveGroups.addEventListener('click', saveGroupParametersUI);
+        }
+        if (btnResetGroups) {
+            btnResetGroups.addEventListener('click', resetGroupParametersUI);
+        }
     };
 
     // 12. EVENT BINDINGS
@@ -1736,6 +2164,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // Global settings adjustments
     elAwsRegion.addEventListener('change', recalculateAll);
     elAwsPlan.addEventListener('change', recalculateAll);
+    const elComplianceBackup = document.getElementById('compliance-realtime-backup');
+    if (elComplianceBackup) {
+        elComplianceBackup.addEventListener('change', recalculateAll);
+    }
+    const elMigrationCost = document.getElementById('compliance-migration-cost');
+    if (elMigrationCost) {
+        elMigrationCost.addEventListener('change', recalculateAll);
+    }
     
     elAncillaryPct.addEventListener('input', (e) => {
         const val = e.target.value;
@@ -1827,6 +2263,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     valA = a.deltaPct;
                     valB = b.deltaPct;
                     break;
+                case 'phanNhom':
+                    valA = (a.phanNhom || "").toLowerCase();
+                    valB = (b.phanNhom || "").toLowerCase();
+                    break;
+                case 'stability':
+                    valA = (a.stability || "").toLowerCase();
+                    valB = (b.stability || "").toLowerCase();
+                    break;
+                case 'performance':
+                    valA = (a.performance || "").toLowerCase();
+                    valB = (b.performance || "").toLowerCase();
+                    break;
                 case 'recommend':
                     valA = a.recommend ? 1 : 0;
                     valB = b.recommend ? 1 : 0;
@@ -1883,6 +2331,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Initialize state & behaviors
     initPricingUI();
+    initGroupParametersUI();
     initTabSwitching();
     initTableSorting();
     updateHeaderSortUI();
