@@ -38,6 +38,12 @@ document.addEventListener('DOMContentLoaded', () => {
     let onPremVsAwsChart = null;
     let awsBreakdownChart = null;
 
+    // Sorting state variables
+    let currentSortColumn = 'stt';
+    let currentSortDirection = 'asc';
+    let sortPortfolio;
+    let updateHeaderSortUI;
+
     // 3. DEFAULT STATIC AWS PRICING CATALOG (Fallback reference)
     const DEFAULT_INSTANCE_CATALOG = {
         ec2: [
@@ -69,10 +75,22 @@ document.addEventListener('DOMContentLoaded', () => {
             { name: 'kafka.m7g.4xlarge', cpu: 16, ram: 64, rates: { 'us-east-1': 1501.2/730, 'ap-southeast-1': 1501.2/730, 'ap-northeast-1': 1501.2/730, 'eu-central-1': 1501.2/730 } },
             { name: 'kafka.m7g.8xlarge', cpu: 32, ram: 128, rates: { 'us-east-1': 2990.4/730, 'ap-southeast-1': 2990.4/730, 'ap-northeast-1': 2990.4/730, 'eu-central-1': 2990.4/730 } }
         ],
+        dms: [
+            { name: 't3.small', cpu: 2, ram: 2, rates: { 'us-east-1': 95.56/730, 'ap-southeast-1': 95.56/730, 'ap-northeast-1': 95.56/730, 'eu-central-1': 95.56/730 }, note: 'Rất nhỏ / DB nhỏ, CDC thấp' },
+            { name: 't3.medium', cpu: 2, ram: 4, rates: { 'us-east-1': 177.32/730, 'ap-southeast-1': 177.32/730, 'ap-northeast-1': 177.32/730, 'eu-central-1': 177.32/730 }, note: 'Nhỏ' },
+            { name: 't3.large', cpu: 2, ram: 8, rates: { 'us-east-1': 340.84/730, 'ap-southeast-1': 340.84/730, 'ap-northeast-1': 340.84/730, 'eu-central-1': 340.84/730 }, note: 'Nhỏ–trung bình' },
+            { name: 'c6i.large', cpu: 2, ram: 4, rates: { 'us-east-1': 338.58/730, 'ap-southeast-1': 338.58/730, 'ap-northeast-1': 338.58/730, 'eu-central-1': 338.58/730 }, note: 'Trung bình, CDC liên tục' },
+            { name: 'c6i.xlarge', cpu: 4, ram: 8, rates: { 'us-east-1': 649.56/730, 'ap-southeast-1': 649.56/730, 'ap-northeast-1': 649.56/730, 'eu-central-1': 649.56/730 }, note: 'Trung bình–lớn' },
+            { name: 'c6i.2xlarge', cpu: 8, ram: 16, rates: { 'us-east-1': 1270.06/730, 'ap-southeast-1': 1270.06/730, 'ap-northeast-1': 1270.06/730, 'eu-central-1': 1270.06/730 }, note: 'Lớn / CDC cao' },
+            { name: 'r6i.large', cpu: 2, ram: 16, rates: { 'us-east-1': 458.30/730, 'ap-southeast-1': 458.30/730, 'ap-northeast-1': 458.30/730, 'eu-central-1': 458.30/730 }, note: 'Memory-intensive' },
+            { name: 'r6i.xlarge', cpu: 4, ram: 32, rates: { 'us-east-1': 889.00/730, 'ap-southeast-1': 889.00/730, 'ap-northeast-1': 889.00/730, 'eu-central-1': 889.00/730 }, note: 'Memory-intensive lớn' },
+            { name: 'r6i.2xlarge', cpu: 8, ram: 64, rates: { 'us-east-1': 1750.40/730, 'ap-southeast-1': 1750.40/730, 'ap-northeast-1': 1750.40/730, 'eu-central-1': 1750.40/730 }, note: 'Rất lớn' }
+        ],
         storage: {
             ebs: { 'us-east-1': 0.096, 'ap-southeast-1': 0.096, 'ap-northeast-1': 0.096, 'eu-central-1': 0.096 }, // gp3 EBS
             rds: { 'us-east-1': 0.138, 'ap-southeast-1': 0.138, 'ap-northeast-1': 0.138, 'eu-central-1': 0.138 }, // gp3 RDS
-            msk: { 'us-east-1': 0.10, 'ap-southeast-1': 0.10, 'ap-northeast-1': 0.10, 'eu-central-1': 0.10 }      // gp3 MSK Storage
+            msk: { 'us-east-1': 0.10, 'ap-southeast-1': 0.10, 'ap-northeast-1': 0.10, 'eu-central-1': 0.10 },      // gp3 MSK Storage
+            dms: { 'us-east-1': 0.096, 'ap-southeast-1': 0.096, 'ap-northeast-1': 0.096, 'eu-central-1': 0.096 }      // gp3 DMS Storage
         },
         eksClusterYear: 876,
         dataTransferOutRate: 0.12
@@ -212,6 +230,38 @@ document.addEventListener('DOMContentLoaded', () => {
             return {
                 name: `2 x ${bestMatch.name}`,
                 rate: bestMatch.rates[region] * 2,
+                count: 1
+            };
+        } else if (serviceType === 'dms') {
+            // Find an exact match first
+            const exactMatch = INSTANCE_CATALOG.dms.find(inst => inst.cpu === cpuReq && inst.ram === ramReq);
+            if (exactMatch) {
+                return {
+                    name: exactMatch.name,
+                    rate: exactMatch.rates[region],
+                    count: 1
+                };
+            }
+
+            // Find the closest sizing by distance metric
+            let bestMatch = null;
+            let minDistance = Infinity;
+
+            for (const inst of INSTANCE_CATALOG.dms) {
+                const distance = Math.abs(inst.cpu - cpuReq) + Math.abs(inst.ram - ramReq) / 4;
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    bestMatch = inst;
+                } else if (distance === minDistance) {
+                    if (inst.cpu >= cpuReq && (!bestMatch || bestMatch.cpu < cpuReq)) {
+                        bestMatch = inst;
+                    }
+                }
+            }
+
+            return {
+                name: bestMatch.name,
+                rate: bestMatch.rates[region],
                 count: 1
             };
         } else {
@@ -373,6 +423,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Parse flat Excel rows into aggregated Applications
     const parsePortfolioFromRows = (rows) => {
+        // Reset sorting states on new files
+        currentSortColumn = 'stt';
+        currentSortDirection = 'asc';
+
         const appMap = {};
 
         // Track last seen parent application info to support merged cells or blank header cells
@@ -450,6 +504,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const classifyService = (compName) => {
         const name = compName.toLowerCase();
         if (
+            name.includes("dms") || 
+            name.includes("migration") || 
+            name.includes("replication") || 
+            name.includes("replicate")
+        ) {
+            return "dms";
+        }
+        if (
             name.includes("kafka") || 
             name.includes("msk") || 
             name.includes("mq") || 
@@ -487,7 +549,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const dtoRate = INSTANCE_CATALOG.dataTransferOutRate !== undefined ? INSTANCE_CATALOG.dataTransferOutRate : 0.12;
 
-        processedPortfolio = parsedPortfolio.map((app) => {
+        processedPortfolio = parsedPortfolio.map((app, index) => {
             let totalBaseAwsUSD = 0;
             let totalComputeUSD = 0;
             let totalDatabaseUSD = 0;
@@ -504,7 +566,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const yearlyComputeUSD = hourlyRate * 24 * 365; // Year rate
                 
                 // Storage cost
-                const storageType = comp.serviceType === 'rds' ? 'rds' : (comp.serviceType === 'msk' ? 'msk' : 'ebs');
+                const storageType = comp.serviceType === 'rds' ? 'rds' : (comp.serviceType === 'msk' ? 'msk' : (comp.serviceType === 'dms' ? 'dms' : 'ebs'));
                 const storageRate = INSTANCE_CATALOG.storage[storageType][region];
                 const yearlyStorageUSD = comp.storage * storageRate * 12;
 
@@ -518,7 +580,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 totalStorageUSD += yearlyStorageUSD;
                 totalDataTransferUSD += yearlyDataTransferUSD;
 
-                if (comp.serviceType === 'rds' || comp.serviceType === 'msk') {
+                if (comp.serviceType === 'rds' || comp.serviceType === 'msk' || comp.serviceType === 'dms') {
                     totalDatabaseUSD += yearlyComputeUSD;
                 } else {
                     totalComputeUSD += yearlyComputeUSD;
@@ -563,6 +625,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             return {
                 ...app,
+                originalIndex: index,
                 components: calculatedComponents,
                 eksClusterFeeVND,
                 totalAncillaryVND,
@@ -578,6 +641,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 isOverridden: false
             };
         });
+
+        // Apply active sorting
+        sortPortfolio();
 
         // Update Stats UI & Table view
         renderDashboard();
@@ -638,7 +704,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (filtered.length === 0) {
             elTableBody.innerHTML = `
                 <tr>
-                    <td colspan="10" class="empty-table-state">
+                    <td colspan="11" class="empty-table-state">
                         <div class="empty-state-content">
                             <i data-lucide="search"></i>
                             <h4>Không tìm thấy kết quả</h4>
@@ -696,14 +762,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     </div>
                 </td>
                 <td class="text-right">
-                    <div class="delta-pill ${deltaClass}">
-                        <span class="delta-amount">${deltaText}</span>
-                        <span class="delta-pct">${pctText}</span>
-                    </div>
+                    <span class="delta-amount ${deltaClass}">${deltaText}</span>
+                </td>
+                <td class="text-right">
+                    <span class="delta-pct ${deltaClass}" style="font-weight: 700; font-size: 0.85rem; font-family: var(--font-display);">${pctText}</span>
                 </td>
                 <td style="text-align: center;">
                     <span class="recommendation-badge ${recClass}">
-                        <i data-lucide="${recIcon}" style="width:14px; height:14px;"></i> ${recLabel}
+                        ${recLabel}
                     </span>
                 </td>
                 <td class="text-right">
@@ -716,7 +782,7 @@ document.addEventListener('DOMContentLoaded', () => {
             trDetail.className = 'detail-row';
             trDetail.style.display = 'none'; // Initially hidden
             trDetail.innerHTML = `
-                <td colspan="10">
+                <td colspan="11">
                     <div class="detail-drawer-container">
                         <div class="drawer-grid">
                             <div class="components-table-block">
@@ -744,7 +810,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                         ${app.components.map(comp => `
                                             <tr>
                                                 <td><strong>${comp.name}</strong></td>
-                                                <td><span class="service-pill ${comp.serviceType === 'rds' ? 'db-pill' : (comp.serviceType === 'msk' ? 'msk-pill' : 'app-pill')}">${comp.serviceType === 'rds' ? 'RDS Postgres' : (comp.serviceType === 'msk' ? 'MSK Kafka' : 'EKS/EC2')}</span></td>
+                                                <td><span class="service-pill ${comp.serviceType === 'rds' ? 'db-pill' : (comp.serviceType === 'msk' ? 'msk-pill' : (comp.serviceType === 'dms' ? 'dms-pill' : 'app-pill'))}">${comp.serviceType === 'rds' ? 'RDS Postgres' : (comp.serviceType === 'msk' ? 'MSK Kafka' : (comp.serviceType === 'dms' ? 'DMS Migration' : 'EKS/EC2'))}</span></td>
                                                 <td class="text-right">${comp.cpu}</td>
                                                 <td class="text-right">${comp.ram} GB</td>
                                                 <td class="text-right">${comp.storage} GB</td>
@@ -1320,6 +1386,15 @@ document.addEventListener('DOMContentLoaded', () => {
             
             if (savedCatalog) {
                 INSTANCE_CATALOG = JSON.parse(savedCatalog);
+                // Highly robust fallback for old or intermediate localStorage states
+                if (!INSTANCE_CATALOG.dms || !Array.isArray(INSTANCE_CATALOG.dms) || INSTANCE_CATALOG.dms.length === 0) {
+                    INSTANCE_CATALOG.dms = JSON.parse(JSON.stringify(DEFAULT_INSTANCE_CATALOG.dms));
+                }
+                if (!INSTANCE_CATALOG.storage) {
+                    INSTANCE_CATALOG.storage = JSON.parse(JSON.stringify(DEFAULT_INSTANCE_CATALOG.storage));
+                } else if (!INSTANCE_CATALOG.storage.dms) {
+                    INSTANCE_CATALOG.storage.dms = JSON.parse(JSON.stringify(DEFAULT_INSTANCE_CATALOG.storage.dms));
+                }
             }
             if (savedExchange) {
                 USD_TO_VND = parseInt(savedExchange, 10) || 26000;
@@ -1342,8 +1417,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const tBodyRds = document.getElementById('table-pricing-rds');
         const tBodyEc2 = document.getElementById('table-pricing-ec2');
         const tBodyMsk = document.getElementById('table-pricing-msk');
+        const tBodyDms = document.getElementById('table-pricing-dms');
 
-        if (!tBodyRds || !tBodyEc2 || !tBodyMsk) return;
+        if (!tBodyRds || !tBodyEc2 || !tBodyMsk || !tBodyDms) return;
 
         // Render RDS
         tBodyRds.innerHTML = INSTANCE_CATALOG.rds.map((inst, index) => {
@@ -1399,6 +1475,25 @@ document.addEventListener('DOMContentLoaded', () => {
             `;
         }).join('');
 
+        // Render DMS
+        tBodyDms.innerHTML = INSTANCE_CATALOG.dms.map((inst, index) => {
+            const monthlyRate = (inst.rates['us-east-1'] * 730).toFixed(2);
+            return `
+                <tr data-service="dms" data-index="${index}">
+                    <td><strong class="instance-code">${inst.name}</strong></td>
+                    <td><input type="number" class="table-inline-input val-cpu" value="${inst.cpu}" min="1" max="256"></td>
+                    <td><input type="number" class="table-inline-input val-ram" value="${inst.ram}" min="1" max="1024"></td>
+                    <td><input type="number" class="table-inline-input val-rate" value="${monthlyRate}" min="0" step="0.01"></td>
+                    <td><input type="text" class="table-inline-input val-note" value="${inst.note || ''}" style="width: 100%;"></td>
+                    <td style="text-align: center;">
+                        <button class="btn-row-delete" onclick="window.deleteCatalogRow('dms', ${index})" title="Xóa dòng máy này">
+                            <i data-lucide="trash-2"></i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
         // Recreate icons inside dynamically generated tables
         lucide.createIcons();
     };
@@ -1433,6 +1528,7 @@ document.addEventListener('DOMContentLoaded', () => {
             INSTANCE_CATALOG.storage.ebs[r] = ebsVal;
             INSTANCE_CATALOG.storage.rds[r] = rdsVal;
             INSTANCE_CATALOG.storage.msk[r] = mskVal;
+            INSTANCE_CATALOG.storage.dms[r] = ebsVal;
         });
 
         // Parse tables
@@ -1443,6 +1539,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 const cpu = parseInt(row.querySelector('.val-cpu').value, 10) || 2;
                 const ram = parseInt(row.querySelector('.val-ram').value, 10) || 8;
                 const monthlyRate = parseFloat(row.querySelector('.val-rate').value) || 100;
+                const elNote = row.querySelector('.val-note');
 
                 // Find the item in our array and update it
                 const item = INSTANCE_CATALOG[serviceType][idx];
@@ -1452,6 +1549,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     regions.forEach(r => {
                         item.rates[r] = monthlyRate / 730;
                     });
+                    if (elNote) {
+                        item.note = elNote.value;
+                    }
                 }
             });
         };
@@ -1459,6 +1559,7 @@ document.addEventListener('DOMContentLoaded', () => {
         parseTable('table-pricing-rds', 'rds');
         parseTable('table-pricing-ec2', 'ec2');
         parseTable('table-pricing-msk', 'msk');
+        parseTable('table-pricing-dms', 'dms');
 
         // Save to storage
         savePricingToStorage();
@@ -1504,6 +1605,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const cpu = parseInt(document.getElementById('add-inst-cpu').value, 10);
         const ram = parseInt(document.getElementById('add-inst-ram').value, 10);
         const monthlyRate = parseFloat(document.getElementById('add-inst-rate').value);
+        const note = serviceType === 'dms' ? document.getElementById('add-inst-note').value.trim() : undefined;
 
         if (!name || isNaN(cpu) || isNaN(ram) || isNaN(monthlyRate)) {
             alert("Vui lòng điền đầy đủ và chính xác thông tin cấu hình máy chủ.");
@@ -1525,7 +1627,11 @@ document.addEventListener('DOMContentLoaded', () => {
         });
 
         // Add to instance catalog
-        INSTANCE_CATALOG[serviceType].push({ name, cpu, ram, rates });
+        const newInst = { name, cpu, ram, rates };
+        if (note !== undefined) {
+            newInst.note = note;
+        }
+        INSTANCE_CATALOG[serviceType].push(newInst);
 
         // Sort catalog ascending/descending so list stays clean
         INSTANCE_CATALOG[serviceType].sort((a, b) => a.cpu - b.cpu || a.ram - b.ram);
@@ -1535,6 +1641,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('add-inst-cpu').value = '2';
         document.getElementById('add-inst-ram').value = '8';
         document.getElementById('add-inst-rate').value = '100';
+        const elNote = document.getElementById('add-inst-note');
+        if (elNote) elNote.value = '';
+        const elNoteWrapper = document.getElementById('add-inst-note-wrapper');
+        if (elNoteWrapper) elNoteWrapper.style.display = 'none';
+        document.getElementById('add-service-type').value = 'ec2';
 
         // Render table
         renderPricingTables();
@@ -1664,9 +1775,117 @@ document.addEventListener('DOMContentLoaded', () => {
         elFormAddInstance.addEventListener('submit', handleAddInstance);
     }
 
+    const elAddServiceType = document.getElementById('add-service-type');
+    if (elAddServiceType) {
+        elAddServiceType.addEventListener('change', (e) => {
+            const wrapper = document.getElementById('add-inst-note-wrapper');
+            if (wrapper) {
+                wrapper.style.display = e.target.value === 'dms' ? 'block' : 'none';
+            }
+        });
+    }
+
+    // ==========================================
+    // 12. RESULTS TABLE SORTING BEHAVIORS
+    // ==========================================
+    sortPortfolio = () => {
+        if (!currentSortColumn || processedPortfolio.length === 0) return;
+
+        processedPortfolio.sort((a, b) => {
+            let valA, valB;
+
+            switch (currentSortColumn) {
+                case 'stt':
+                    valA = a.originalIndex;
+                    valB = b.originalIndex;
+                    break;
+                case 'maPM':
+                    valA = a.maPM.toLowerCase();
+                    valB = b.maPM.toLowerCase();
+                    break;
+                case 'tenPM':
+                    valA = a.tenPM.toLowerCase();
+                    valB = b.tenPM.toLowerCase();
+                    break;
+                case 'owner':
+                    valA = a.owner.toLowerCase();
+                    valB = b.owner.toLowerCase();
+                    break;
+                case 'onPremCost':
+                    valA = a.onPremCost;
+                    valB = b.onPremCost;
+                    break;
+                case 'grandTotalAwsVND':
+                    valA = a.grandTotalAwsVND;
+                    valB = b.grandTotalAwsVND;
+                    break;
+                case 'deltaVND':
+                    valA = a.deltaVND;
+                    valB = b.deltaVND;
+                    break;
+                case 'deltaPct':
+                    valA = a.deltaPct;
+                    valB = b.deltaPct;
+                    break;
+                case 'recommend':
+                    valA = a.recommend ? 1 : 0;
+                    valB = b.recommend ? 1 : 0;
+                    break;
+                default:
+                    return 0;
+            }
+
+            if (valA < valB) return currentSortDirection === 'asc' ? -1 : 1;
+            if (valA > valB) return currentSortDirection === 'asc' ? 1 : -1;
+            return 0;
+        });
+    };
+
+    updateHeaderSortUI = () => {
+        const headers = document.querySelectorAll('#results-table th.sortable');
+        headers.forEach(th => {
+            const colField = th.getAttribute('data-sort');
+            th.classList.remove('active-sort');
+            
+            const icon = th.querySelector('.sort-icon');
+            if (icon) {
+                if (colField === currentSortColumn) {
+                    th.classList.add('active-sort');
+                    const iconName = currentSortDirection === 'asc' ? 'chevron-up' : 'chevron-down';
+                    icon.setAttribute('data-lucide', iconName);
+                } else {
+                    icon.setAttribute('data-lucide', 'chevrons-up-down');
+                }
+            }
+        });
+        
+        lucide.createIcons();
+    };
+
+    const initTableSorting = () => {
+        const headers = document.querySelectorAll('#results-table th.sortable');
+        headers.forEach(th => {
+            th.addEventListener('click', () => {
+                const colField = th.getAttribute('data-sort');
+                if (colField === currentSortColumn) {
+                    currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    currentSortColumn = colField;
+                    currentSortDirection = 'asc';
+                }
+                
+                sortPortfolio();
+                renderTableRows();
+                updateHeaderSortUI();
+            });
+        });
+    };
+
     // Initialize state & behaviors
     initPricingUI();
     initTabSwitching();
+    initTableSorting();
+    updateHeaderSortUI();
 
     // Add helper to set dates dynamically for print footer reports
     const updatePrintDateAttribute = () => {

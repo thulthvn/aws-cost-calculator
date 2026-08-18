@@ -227,16 +227,16 @@
                         <table class="premium-table" id="results-table">
                             <thead>
                                 <tr>
-                                    <th style="width: 50px;">STT</th>
-                                    <th style="width: 100px;">Mã PM</th>
-                                    <th style="width: 200px;">Tên PM</th>
-                                    <th style="width: 180px;">Đơn vị đầu mối nghiệp vụ</th>
-                                    <th class="text-right" style="width: 180px;">Chi phí hạ tầng được phân bổ 1 năm</th>
-                                    <th class="text-right" style="width: 180px;">Chi phí trên AWS Cloud trong 1 năm</th>
+                                    <th class="sortable" data-sort="stt" style="width: 70px;">STT <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
+                                    <th class="sortable" data-sort="maPM" style="width: 120px;">Mã PM <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
+                                    <th class="sortable" data-sort="tenPM" style="width: 220px;">Tên PM <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
+                                    <th class="sortable" data-sort="owner" style="width: 200px;">Đơn vị đầu mối nghiệp vụ <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
+                                    <th class="sortable text-right" data-sort="onPremCost" style="width: 220px;">Chi phí hạ tầng được phân bổ 1 năm <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
+                                    <th class="sortable text-right" data-sort="grandTotalAwsVND" style="width: 220px;">Chi phí trên AWS Cloud trong 1 năm <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
                                     <th style="width: 280px;">Số tiền/Tỷ lệ % dịch vụ</th>
-                                    <th class="text-right" style="width: 180px;">Số tiền tăng/giảm</th>
-                                    <th class="text-right" style="width: 120px;">Tỷ lệ tăng/giảm</th>
-                                    <th style="width: 220px; text-align: center;">Đề xuất (Nên/không nên đưa lên Cloud)</th>
+                                    <th class="sortable text-right" data-sort="deltaVND" style="width: 200px;">Số tiền tăng/giảm <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
+                                    <th class="sortable text-right" data-sort="deltaPct" style="width: 150px;">Tỷ lệ tăng/giảm <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
+                                    <th class="sortable" data-sort="recommend" style="width: 240px; text-align: center;">Đề xuất (Nên/không nên đưa lên Cloud) <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
                                     <th style="width: 40px;"></th>
                                 </tr>
                             </thead>
@@ -366,11 +366,12 @@
                                             <option value="ec2">Amazon EC2 / EKS Compute</option>
                                             <option value="rds">Amazon RDS Postgres</option>
                                             <option value="msk">Amazon MSK Kafka</option>
+                                            <option value="dms">Amazon DMS Migration Service</option>
                                         </select>
                                     </div>
                                     <div class="input-wrapper margin-top-md">
                                         <label for="add-inst-name">Tên dòng máy (Instance Name)</label>
-                                        <input type="text" id="add-inst-name" class="custom-input-text" placeholder="Ví dụ: m6i.xlarge, db.m7g.large" required>
+                                        <input type="text" id="add-inst-name" class="custom-input-text" placeholder="Ví dụ: m6i.xlarge, db.m7g.large, t3.small" required>
                                     </div>
                                     <div class="row-inputs margin-top-md" style="display: flex; gap: 15px;">
                                         <div class="input-wrapper" style="flex: 1;">
@@ -385,6 +386,10 @@
                                     <div class="input-wrapper margin-top-md">
                                         <label for="add-inst-rate">Đơn giá tháng ($ / 730h)</label>
                                         <input type="number" id="add-inst-rate" class="custom-input-text" min="0" max="100000" step="0.01" value="100" required>
+                                    </div>
+                                    <div class="input-wrapper margin-top-md" id="add-inst-note-wrapper" style="display: none;">
+                                        <label for="add-inst-note">Mức workload đề xuất (Chỉ dành cho DMS)</label>
+                                        <input type="text" id="add-inst-note" class="custom-input-text" placeholder="Ví dụ: Rất nhỏ / DB nhỏ, CDC thấp">
                                     </div>
                                     <button type="submit" id="btn-add-instance-submit" class="btn btn-accent" style="width: 100%; margin-top: 15px; display: flex; justify-content: center; align-items: center; gap: 8px;">
                                         <i data-lucide="plus"></i> Thêm vào Bảng giá
@@ -474,6 +479,30 @@
                                             </tr>
                                         </thead>
                                         <tbody id="table-pricing-msk">
+                                            <!-- Dynamically Rendered -->
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <!-- DMS Section -->
+                            <div class="catalog-table-card">
+                                <div class="catalog-table-header color-dms">
+                                    <h3><i data-lucide="git-compare"></i> Amazon DMS Database Migration Service (t3, c6i, r6i)</h3>
+                                </div>
+                                <div class="catalog-table-wrapper">
+                                    <table class="editable-catalog-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Tên Instance</th>
+                                                <th style="width: 85px;">vCPU</th>
+                                                <th style="width: 95px;">RAM (GB)</th>
+                                                <th style="width: 140px;">USD/Tháng (730h)</th>
+                                                <th>Mức Workload đề xuất</th>
+                                                <th style="width: 50px;"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="table-pricing-dms">
                                             <!-- Dynamically Rendered -->
                                         </tbody>
                                     </table>
