@@ -403,20 +403,20 @@ document.addEventListener('DOMContentLoaded', () => {
         const headers = [
             "STT", "Mã PM", "Tên PM", "Đơn vị đầu mối nghiệp vụ", "Phân nhóm", 
             "Chi phí hạ tầng được phân bổ 1 năm", "Tên cấu phần", 
-            "CPU", "RAM (GB)", "Storage (GB)", "Data Transfer Out (GB)"
+            "CPU", "RAM (GB)", "Storage (GB)", "Data Transfer Out (GB)", "Chi phí QTVH"
         ];
 
         // High fidelity sample data to help user understand the formatting
         const sampleRows = [
-            [1, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", "N1 — Ứng dụng web, quản trị nội bộ", 650000000, "Web Server Cluster", 4, 8, 150, 100],
-            [2, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", "N1 — Ứng dụng web, quản trị nội bộ", 650000000, "Database Postgres High-Availability", 16, 64, 1500, 500],
-            [3, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", "N2 — Kênh khách hàng, tác nghiệp phụ thuộc Core", 120000000, "Nền tảng CMS Frontend", 2, 4, 50, 50],
-            [4, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", "N2 — Kênh khách hàng, tác nghiệp phụ thuộc Core", 120000000, "Cơ sở dữ liệu người dùng SQL", 4, 16, 250, 150],
-            [5, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", "N6 — Phần mềm thương mại đóng gói", 90000000, "API Gateway & Application Server", 2, 4, 30, 20],
-            [6, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", "N6 — Phần mềm thương mại đóng gói", 90000000, "Database HRM Postgres", 2, 8, 80, 40],
-            [7, "PM-04", "Ứng dụng Di động m-Banking", "Khối Ngân hàng Số", "N3 — Thanh toán, thẻ, chứng khoán, ký số", 180000000, "Microservices Application Engine", 12, 24, 200, 300],
-            [8, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", "N4 — Dữ liệu, báo cáo, xử lý theo lô", 1200000000, "Spark/BI Data Processing Node", 32, 128, 500, 1000],
-            [9, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", "N4 — Dữ liệu, báo cáo, xử lý theo lô", 1200000000, "Data Warehouse Postgres Analytics", 64, 256, 4000, 2000]
+            [1, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", "N1 — Ứng dụng web, quản trị nội bộ", 650000000, "Web Server Cluster", 4, 8, 150, 100, 50000000],
+            [2, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", "N1 — Ứng dụng web, quản trị nội bộ", 650000000, "Database Postgres High-Availability", 16, 64, 1500, 500, 50000000],
+            [3, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", "N2 — Kênh khách hàng, tác nghiệp phụ thuộc Core", 120000000, "Nền tảng CMS Frontend", 2, 4, 50, 50, 15000000],
+            [4, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", "N2 — Kênh khách hàng, tác nghiệp phụ thuộc Core", 120000000, "Cơ sở dữ liệu người dùng SQL", 4, 16, 250, 150, 15000000],
+            [5, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", "N6 — Phần mềm thương mại đóng gói", 90000000, "API Gateway & Application Server", 2, 4, 30, 20, 10000000],
+            [6, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", "N6 — Phần mềm thương mại đóng gói", 90000000, "Database HRM Postgres", 2, 8, 80, 40, 10000000],
+            [7, "PM-04", "Ứng dụng Di động m-Banking", "Khối Ngân hàng Số", "N3 — Thanh toán, thẻ, chứng khoán, ký số", 180000000, "Microservices Application Engine", 12, 24, 200, 300, 25000000],
+            [8, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", "N4 — Dữ liệu, báo cáo, xử lý theo lô", 1200000000, "Spark/BI Data Processing Node", 32, 128, 500, 1000, 80000000],
+            [9, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", "N4 — Dữ liệu, báo cáo, xử lý theo lô", 1200000000, "Data Warehouse Postgres Analytics", 64, 256, 4000, 2000, 80000000]
         ];
 
         // Build workbook
@@ -436,7 +436,8 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 8 },  // CPU
             { wch: 12 }, // RAM
             { wch: 14 }, // Storage
-            { wch: 22 }  // Data Transfer Out (GB)
+            { wch: 22 }, // Data Transfer Out (GB)
+            { wch: 20 }  // Chi phí QTVH
         ];
 
         XLSX.utils.book_append_sheet(wb, ws, "Danh sach hạ tầng");
@@ -521,12 +522,12 @@ document.addEventListener('DOMContentLoaded', () => {
         currentSortDirection = 'asc';
 
         const appMap = {};
-
         // Track last seen parent application info to support merged cells or blank header cells
         let lastSeenCode = "";
         let lastSeenName = "";
         let lastSeenOwner = "";
         let lastSeenOnPremStr = "0";
+        let lastSeenQtvhStr = "0";
         let lastSeenGroup = "";
 
         rows.forEach((row) => {
@@ -537,6 +538,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let rawGroup = String(getRowValue(row, ["phan nhom", "nhom", "app group", "group"]) || "").trim();
             let rawOwner = String(getRowValue(row, ["don vi dau moi nghiep vu", "dau moi", "nghiep vu", "chu so huu", "business owner", "owner", "don vi"]) || "").trim();
             let rawOnPremStr = String(getRowValue(row, ["chi phi ha tang duoc phan bo 1 nam", "chi phi ha tang", "chi phi 1 nam", "on-prem cost", "onprem cost", "budget", "chi phi"]) || "");
+            let rawQtvhStr = String(getRowValue(row, ["chi phi qtvh", "qtvh", "quan tri van hanh", "chi phi quan tri van hanh", "ops cost", "mgt cost"]) || "");
             const rawCompName = String(getRowValue(row, ["ten cau phan", "cau phan", "component name", "component", "device", "ten thiet bi"]) || "").trim();
             let cpuVal = parseFloat(getRowValue(row, ["cpu", "vcpu", "cores", "core"]));
             let ramVal = parseFloat(getRowValue(row, ["ram (gb)", "ram", "memory", "dung luong ram"]));
@@ -555,6 +557,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 rawOwner = lastSeenOwner;
                 rawGroup = lastSeenGroup;
                 if (!rawOnPremStr) rawOnPremStr = lastSeenOnPremStr;
+                if (!rawQtvhStr) rawQtvhStr = lastSeenQtvhStr;
             } else {
                 // Keep record of last valid application header values
                 if (rawCode) lastSeenCode = rawCode;
@@ -562,12 +565,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (rawOwner) lastSeenOwner = rawOwner;
                 if (rawGroup) lastSeenGroup = rawGroup;
                 if (rawOnPremStr) lastSeenOnPremStr = rawOnPremStr;
+                if (rawQtvhStr) lastSeenQtvhStr = rawQtvhStr;
             }
 
             if (!rawCode && !rawName) return; // Skip truly empty rows
 
-            // Clean OnPremise Cost
+            // Clean OnPremise Cost & QTVH Cost
             const cleanedOnPrem = parseFloat((rawOnPremStr || "0").replace(/[^0-9.-]/g, '')) || 0;
+            const cleanedQtvh = parseFloat((rawQtvhStr || "0").replace(/[^0-9.-]/g, '')) || 0;
 
             const appKey = rawCode || rawName;
 
@@ -578,6 +583,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     tenPM: rawName || "Ứng dụng chưa đặt tên",
                     owner: rawOwner || "Chưa xác định",
                     onPremCost: cleanedOnPrem,
+                    qtvhCost: cleanedQtvh,
                     phanNhom: normGroup,
                     components: []
                 };
@@ -771,7 +777,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             // Grand total
             const grandTotalAwsUSD = totalBaseAwsUSD + totalAncillaryUSD;
-            const grandTotalAwsVND = (grandTotalAwsUSD * USD_TO_VND) + totalRealtimeReplicationVND + migrationCostVND;
+            const grandTotalAwsVND = (grandTotalAwsUSD * USD_TO_VND) + totalRealtimeReplicationVND + migrationCostVND + (app.qtvhCost || 0);
 
             // Deltas
             const deltaVND = grandTotalAwsVND - app.onPremCost;
@@ -1052,6 +1058,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 <td class="text-right" style="color: var(--primary-color);">${formatVND(app.totalRealtimeReplicationVND)}</td>
                                             </tr>
                                         ` : ''}
+                                         ${app.qtvhCost > 0 ? `
+                                             <tr style="background: rgba(0, 90, 54, 0.02); font-weight:600;">
+                                                 <td colspan="6">Chi phí quản trị vận hành (QTVH)</td>
+                                                 <td><span class="instance-code" style="color: var(--primary-color);">QTVH</span></td>
+                                                 <td class="text-right">-</td>
+                                                 <td class="text-right">-</td>
+                                                 <td class="text-right">-</td>
+                                                 <td class="text-right" style="color: var(--primary-color); font-weight: 700;">${formatVND(app.qtvhCost)}</td>
+                                             </tr>
+                                         ` : ''}
                                          ${app.migrationCostVND > 0 ? `
                                              <tr style="background: rgba(0, 90, 54, 0.02); font-weight:600;">
                                                  <td colspan="6">Chi phí chuyển đổi (Migration Mandays: <strong>${app.migrationMandays} ngày công</strong>)</td>
@@ -1270,23 +1286,51 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // 10. DYNAMIC SPREADSHEET EXPORTER FOR CALCULATED RESULTS
     const exportResultsToExcel = () => {
         if (processedPortfolio.length === 0) return;
 
         // 1. Generate Summary Data for Sheet 1
         const summaryData = processedPortfolio.map((app, index) => {
-            const computePct = Math.round((app.totalComputeVND / app.grandTotalAwsVND) * 100) || 0;
-            const dbPct = Math.round((app.totalDatabaseVND / app.grandTotalAwsVND) * 100) || 0;
-            const storagePct = Math.round((app.totalStorageVND / app.grandTotalAwsVND) * 100) || 0;
+            // Calculate merged compute, database, and Kafka costs
+            let mergedComputeVND = 0;
+            let mergedDatabaseVND = 0;
+            let mergedKafkaVND = 0;
+
+            app.components.forEach(comp => {
+                const baseVND = (comp.yearlyComputeCostVND || 0) + (comp.yearlyStorageCostVND || 0);
+                if (comp.serviceType === 'msk') {
+                    mergedKafkaVND += baseVND;
+                } else if (comp.serviceType === 'rds' || comp.serviceType === 'dms') {
+                    mergedDatabaseVND += baseVND;
+                } else {
+                    mergedComputeVND += baseVND;
+                }
+            });
+
+            // Add Cluster EKS fee
+            if (app.eksClusterFeeVND > 0) {
+                mergedComputeVND += app.eksClusterFeeVND;
+            }
+
+            // Database replication compute cost
+            if (app.totalReplicationComputeVND > 0) {
+                mergedDatabaseVND += app.totalReplicationComputeVND;
+            }
+
             const totalPhuTroVND = app.totalAncillaryVND + (app.totalDataTransferVND || 0);
-            const ancillaryPct = Math.round((totalPhuTroVND / app.grandTotalAwsVND) * 100) || 0;
+            const cloudServiceCostVND = app.grandTotalAwsVND - (app.totalRealtimeReplicationVND || 0) - (app.migrationCostVND || 0) - (app.qtvhCost || 0);
+            const denom = cloudServiceCostVND > 0 ? cloudServiceCostVND : 1;
+
+            const computePct = Math.round((mergedComputeVND / denom) * 100) || 0;
+            const dbPct = Math.round((mergedDatabaseVND / denom) * 100) || 0;
+            const kafkaPct = Math.round((mergedKafkaVND / denom) * 100) || 0;
+            const ancillaryPct = Math.round((totalPhuTroVND / denom) * 100) || 0;
 
             const recText = app.recommend ? "Có" : "Không";
             const deltaAmtText = `${app.deltaVND <= 0 ? 'Giảm' : 'Tăng'} ${Math.abs(app.deltaVND).toLocaleString()}đ`;
             const deltaPctText = `${app.deltaVND <= 0 ? '-' : '+'}${Math.abs(app.deltaPct).toFixed(2)}%`;
 
-            const serviceBreakdown = `Compute: ${app.totalComputeVND.toLocaleString()}đ (${computePct}%), DB: ${app.totalDatabaseVND.toLocaleString()}đ (${dbPct}%), Storage: ${app.totalStorageVND.toLocaleString()}đ (${storagePct}%), Phụ trợ: ${totalPhuTroVND.toLocaleString()}đ (${ancillaryPct}%)`;
+            const serviceBreakdown = `Compute: ${mergedComputeVND.toLocaleString()}đ (${computePct}%), DB: ${mergedDatabaseVND.toLocaleString()}đ (${dbPct}%), Kafka: ${mergedKafkaVND.toLocaleString()}đ (${kafkaPct}%), Phụ trợ: ${totalPhuTroVND.toLocaleString()}đ (${ancillaryPct}%)`;
 
             return {
                 "STT": index + 1,
@@ -1294,17 +1338,20 @@ document.addEventListener('DOMContentLoaded', () => {
                 "Tên PM": app.tenPM,
                 "Đơn vị đầu mối nghiệp vụ": app.owner,
                 "Phân nhóm": GROUP_INFO[app.phanNhom].name,
-                "Chi phí hạ tầng được phân bỏ 1 năm": Math.round(app.onPremCost),
+                "Chi phí hạ tầng được phân bổ 1 năm": Math.round(app.onPremCost),
                 "Chi phí trên AWS Cloud trong 1 năm": Math.round(app.grandTotalAwsVND),
-                "Phí tuân thủ sao lưu Việt Nam (VND)": Math.round(app.totalRealtimeReplicationVND || 0),
-                "Mức độ phức tạp": app.complexityLevel,
-                "Số ngày công chuyển đổi (Mandays)": app.migrationMandays,
-                "Chi phí chuyển đổi (VND)": Math.round(app.migrationCostVND || 0),
-                "Số tiền/Tỷ lệ % dịch vụ": serviceBreakdown,
+                "Chi tiết chi phí dịch vụ Cloud": serviceBreakdown,
+                "Chi phí dịch vụ Cloud": Math.round(cloudServiceCostVND),
+                "Chi phí Data Transfer Out": Math.round(app.totalDataTransferVND || 0),
+                "Chi phí lưu bản sao cập nhật real time tại VN": Math.round(app.totalRealtimeReplicationVND || 0),
+                "Chi phí chuyển đổi": Math.round(app.migrationCostVND || 0),
+                "Chi phí QTVH": Math.round(app.qtvhCost || 0),
                 "Số tiền tăng/giảm": deltaAmtText,
                 "Tỷ lệ tăng/giảm": deltaPctText,
                 "Độ ổn định": app.stability,
                 "Hiệu năng": app.performance,
+                "Mức độ phức tạp": app.complexityLevel,
+                "Số ngày công chuyển đổi (Mandays)": app.migrationMandays,
                 "Đề xuất đưa lên Cloud": recText
             };
         });
@@ -1312,9 +1359,12 @@ document.addEventListener('DOMContentLoaded', () => {
         // 2. Generate Detailed Component-level Data for Sheet 2
         const exportData = [];
         let globalCompStt = 1;
+        const ancillaryPctVal = parseFloat(elAncillaryPct.value) || 0;
 
         processedPortfolio.forEach(app => {
-            app.components.forEach(comp => {
+            app.components.forEach((comp, compIndex) => {
+                const compAncillaryVND = (comp.yearlyComputeCostVND + comp.yearlyStorageCostVND + (comp.yearlyDataTransferCostVND || 0)) * (ancillaryPctVal / 100) + (compIndex === 0 ? (app.eksClusterFeeVND || 0) * (ancillaryPctVal / 100) : 0);
+
                 exportData.push({
                     "STT": globalCompStt++,
                     "Mã PM": app.maPM,
@@ -1332,7 +1382,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     "AWS Dịch vụ quy đổi": comp.matchedInstanceCount === 1 ? comp.matchedInstance : `${comp.matchedInstanceCount} x ${comp.matchedInstance}`,
                     "Phí AWS Compute / Năm (VND)": Math.round(comp.yearlyComputeCostVND),
                     "Phí AWS Storage / Năm (VND)": Math.round(comp.yearlyStorageCostVND),
+                    "Chi phí phụ trợ (VND)": Math.round(compAncillaryVND),
                     "Phí AWS Data Transfer / Năm (VND)": Math.round(comp.yearlyDataTransferCostVND || 0),
+                    "Chi phí QTVH (VND)": compIndex === 0 ? Math.round(app.qtvhCost || 0) : 0,
                     "Phí tuân thủ sao lưu Việt Nam (VND)": Math.round(comp.realtimeReplicationCostVND || 0),
                     "Tổng chi phí AWS Cấu phần / Năm (VND)": Math.round(comp.totalYearlyCostVND)
                 });
@@ -1352,16 +1404,19 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 35 },  // Phân nhóm
             { wch: 35 },  // Chi phí hạ tầng được phân bổ 1 năm
             { wch: 35 },  // Chi phí trên AWS Cloud trong 1 năm
-            { wch: 35 },  // Phí tuân thủ sao lưu Việt Nam (VND)
-            { wch: 25 },  // Mức độ phức tạp
-            { wch: 30 },  // Số ngày công chuyển đổi (Mandays)
-            { wch: 25 },  // Chi phí chuyển đổi (VND)
-            { wch: 80 },  // Số tiền/Tỷ lệ % dịch vụ
+            { wch: 80 },  // Chi tiết chi phí dịch vụ Cloud
+            { wch: 25 },  // Chi phí dịch vụ Cloud
+            { wch: 30 },  // Chi phí Data Transfer Out
+            { wch: 45 },  // Chi phí lưu bản sao cập nhật real time tại VN
+            { wch: 25 },  // Chi phí chuyển đổi
+            { wch: 20 },  // Chi phí QTVH
             { wch: 25 },  // Số tiền tăng/giảm
             { wch: 20 },  // Tỷ lệ tăng/giảm
             { wch: 45 },  // Độ ổn định
             { wch: 45 },  // Hiệu năng
-            { wch: 30 }   // Đề xuất
+            { wch: 25 },  // Mức độ phức tạp
+            { wch: 30 },  // Số ngày công chuyển đổi (Mandays)
+            { wch: 30 }   // Đề xuất đưa lên Cloud
         ];
         XLSX.utils.book_append_sheet(wb, wsSummary, "Tong_hop_PM");
 
@@ -1384,7 +1439,9 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 25 },  // AWS Dịch vụ quy đổi
             { wch: 28 },  // Phí AWS Compute
             { wch: 28 },  // Phí AWS Storage
+            { wch: 22 },  // Chi phí phụ trợ
             { wch: 32 },  // Phí AWS Data Transfer
+            { wch: 20 },  // Chi phí QTVH
             { wch: 35 },  // Phí tuân thủ sao lưu Việt Nam (VND)
             { wch: 32 }   // Tổng chi phí
         ];
@@ -1541,17 +1598,17 @@ document.addEventListener('DOMContentLoaded', () => {
     // 11. TRY SAMPLE DATA (Loads standard Vietnamese portfolio immediately)
     const loadSampleData = () => {
         const mockRows = [
-            { "STT": 1, "Mã PM": "PM-CBS", "Tên PM": "Core Banking CBS System", "Đơn vị đầu mối nghiệp vụ": "Khối Dịch vụ Tài chính", "Chi phí hạ tầng được phân bổ 1 năm": "750,000,000", "Tên cấu phần": "Web Application Front-end", "CPU": 4, "RAM (GB)": 8, "Storage (GB)": 150 },
-            { "STT": 2, "Mã PM": "PM-CBS", "Tên PM": "Core Banking CBS System", "Đơn vị đầu mối nghiệp vụ": "Khối Dịch vụ Tài chính", "Chi phí hạ tầng được phân bổ 1 năm": "750,000,000", "Tên cấu phần": "Database Engine Postgres Active", "CPU": 16, "RAM (GB)": 64, "Storage (GB)": 1500 },
-            { "STT": 3, "Mã PM": "PM-CBS", "Tên PM": "Core Banking CBS System", "Đơn vị đầu mối nghiệp vụ": "Khối Dịch vụ Tài chính", "Chi phí hạ tầng được phân bổ 1 năm": "750,000,000", "Tên cấu phần": "Database Engine Postgres Standby", "CPU": 16, "RAM (GB)": 64, "Storage (GB)": 1500 },
-            { "STT": 4, "Mã PM": "PM-CMS", "Tên PM": "Cổng thông tin Điện tử Khách hàng CMS", "Đơn vị đầu mối nghiệp vụ": "Phòng Marketing & CSKH", "Chi phí hạ tầng được phân bổ 1 năm": "140,000,000", "Tên cấu phần": "CMS Node Core API", "CPU": 2, "RAM (GB)": 4, "Storage (GB)": 50 },
-            { "STT": 5, "Mã PM": "PM-CMS", "Tên PM": "Cổng thông tin Điện tử Khách hàng CMS", "Đơn vị đầu mối nghiệp vụ": "Phòng Marketing & CSKH", "Chi phí hạ tầng được phân bổ 1 năm": "140,000,000", "Tên cấu phần": "Database CMS User Postgres SQL", "CPU": 4, "RAM (GB)": 16, "Storage (GB)": 200 },
-            { "STT": 6, "Mã PM": "PM-HRM", "Tên PM": "Hệ thống Quản lý Nhân sự HRM Pro", "Đơn vị đầu mối nghiệp vụ": "Khối Tổ chức Nhân sự", "Chi phí hạ tầng được phân bổ 1 năm": "80,000,000", "Tên cấu phần": "HRM Web Console API", "CPU": 2, "RAM (GB)": 4, "Storage (GB)": 30 },
-            { "STT": 7, "Mã PM": "PM-HRM", "Tên PM": "Hệ thống Quản lý Nhân sự HRM Pro", "Đơn vị đầu mối nghiệp vụ": "Khối Tổ chức Nhân sự", "Chi phí hạ tầng được phân bổ 1 năm": "80,000,000", "Tên cấu phần": "Database HRM SQLite-Postgres", "CPU": 2, "RAM (GB)": 8, "Storage (GB)": 80 },
-            { "STT": 8, "Mã PM": "PM-MB", "Tên PM": "Ứng dụng di động m-Banking iOS/Android", "Đơn vị đầu mối nghiệp vụ": "Khối Ngân hàng Số", "Chi phí hạ tầng được phân bổ 1 năm": "180,000,000", "Tên cấu phần": "API Gateway Router Container", "CPU": 4, "RAM (GB)": 8, "Storage (GB)": 40 },
-            { "STT": 9, "Mã PM": "PM-MB", "Tên PM": "Ứng dụng di động m-Banking iOS/Android", "Đơn vị đầu mối nghiệp vụ": "Khối Ngân hàng Số", "Chi phí hạ tầng được phân bổ 1 năm": "180,000,000", "Tên cấu phần": "Microservice Transaction Core", "CPU": 8, "RAM (GB)": 16, "Storage (GB)": 150 },
-            { "STT": 10, "Mã PM": "PM-BI", "Tên PM": "Phân tích Kinh doanh BI & Warehouse", "Đơn vị đầu mối nghiệp vụ": "Phòng Quản trị Dữ liệu", "Chi phí hạ tầng được phân bổ 1 năm": "1,100,000,000", "Tên cấu phần": "Kafka Event Streams", "CPU": 8, "RAM (GB)": 32, "Storage (GB)": 400 },
-            { "STT": 11, "Mã PM": "PM-BI", "Tên PM": "Phân tích Kinh doanh BI & Warehouse", "Đơn vị đầu mối nghiệp vụ": "Phòng Quản trị Dữ liệu", "Chi phí hạ tầng được phân bổ 1 năm": "1,100,000,000", "Tên cấu phần": "Analytics DB Postgres Node", "CPU": 32, "RAM (GB)": 128, "Storage (GB)": 3500 }
+            { "STT": 1, "Mã PM": "PM-CBS", "Tên PM": "Core Banking CBS System", "Đơn vị đầu mối nghiệp vụ": "Khối Dịch vụ Tài chính", "Chi phí hạ tầng được phân bổ 1 năm": "750,000,000", "Chi phí QTVH": "50,000,000", "Tên cấu phần": "Web Application Front-end", "CPU": 4, "RAM (GB)": 8, "Storage (GB)": 150 },
+            { "STT": 2, "Mã PM": "PM-CBS", "Tên PM": "Core Banking CBS System", "Đơn vị đầu mối nghiệp vụ": "Khối Dịch vụ Tài chính", "Chi phí hạ tầng được phân bổ 1 năm": "750,000,000", "Chi phí QTVH": "50,000,000", "Tên cấu phần": "Database Engine Postgres Active", "CPU": 16, "RAM (GB)": 64, "Storage (GB)": 1500 },
+            { "STT": 3, "Mã PM": "PM-CBS", "Tên PM": "Core Banking CBS System", "Đơn vị đầu mối nghiệp vụ": "Khối Dịch vụ Tài chính", "Chi phí hạ tầng được phân bổ 1 năm": "750,000,000", "Chi phí QTVH": "50,000,000", "Tên cấu phần": "Database Engine Postgres Standby", "CPU": 16, "RAM (GB)": 64, "Storage (GB)": 1500 },
+            { "STT": 4, "Mã PM": "PM-CMS", "Tên PM": "Cổng thông tin Điện tử Khách hàng CMS", "Đơn vị đầu mối nghiệp vụ": "Phòng Marketing & CSKH", "Chi phí hạ tầng được phân bổ 1 năm": "140,000,000", "Chi phí QTVH": "15,000,000", "Tên cấu phần": "CMS Node Core API", "CPU": 2, "RAM (GB)": 4, "Storage (GB)": 50 },
+            { "STT": 5, "Mã PM": "PM-CMS", "Tên PM": "Cổng thông tin Điện tử Khách hàng CMS", "Đơn vị đầu mối nghiệp vụ": "Phòng Marketing & CSKH", "Chi phí hạ tầng được phân bổ 1 năm": "140,000,000", "Chi phí QTVH": "15,000,000", "Tên cấu phần": "Database CMS User Postgres SQL", "CPU": 4, "RAM (GB)": 16, "Storage (GB)": 200 },
+            { "STT": 6, "Mã PM": "PM-HRM", "Tên PM": "Hệ thống Quản lý Nhân sự HRM Pro", "Đơn vị đầu mối nghiệp vụ": "Khối Tổ chức Nhân sự", "Chi phí hạ tầng được phân bổ 1 năm": "80,000,000", "Chi phí QTVH": "10,000,000", "Tên cấu phần": "HRM Web Console API", "CPU": 2, "RAM (GB)": 4, "Storage (GB)": 30 },
+            { "STT": 7, "Mã PM": "PM-HRM", "Tên PM": "Hệ thống Quản lý Nhân sự HRM Pro", "Đơn vị đầu mối nghiệp vụ": "Khối Tổ chức Nhân sự", "Chi phí hạ tầng được phân bổ 1 năm": "80,000,000", "Chi phí QTVH": "10,000,000", "Tên cấu phần": "Database HRM SQLite-Postgres", "CPU": 2, "RAM (GB)": 8, "Storage (GB)": 80 },
+            { "STT": 8, "Mã PM": "PM-MB", "Tên PM": "Ứng dụng di động m-Banking iOS/Android", "Đơn vị đầu mối nghiệp vụ": "Khối Ngân hàng Số", "Chi phí hạ tầng được phân bổ 1 năm": "180,000,000", "Chi phí QTVH": "25,000,000", "Tên cấu phần": "API Gateway Router Container", "CPU": 4, "RAM (GB)": 8, "Storage (GB)": 40 },
+            { "STT": 9, "Mã PM": "PM-MB", "Tên PM": "Ứng dụng di động m-Banking iOS/Android", "Đơn vị đầu mối nghiệp vụ": "Khối Ngân hàng Số", "Chi phí hạ tầng được phân bổ 1 năm": "180,000,000", "Chi phí QTVH": "25,000,000", "Tên cấu phần": "Microservice Transaction Core", "CPU": 8, "RAM (GB)": 16, "Storage (GB)": 150 },
+            { "STT": 10, "Mã PM": "PM-BI", "Tên PM": "Phân tích Kinh doanh BI & Warehouse", "Đơn vị đầu mối nghiệp vụ": "Phòng Quản trị Dữ liệu", "Chi phí hạ tầng được phân bổ 1 năm": "1,100,000,000", "Chi phí QTVH": "80,000,000", "Tên cấu phần": "Kafka Event Streams", "CPU": 8, "RAM (GB)": 32, "Storage (GB)": 400 },
+            { "STT": 11, "Mã PM": "PM-BI", "Tên PM": "Phân tích Kinh doanh BI & Warehouse", "Đơn vị đầu mối nghiệp vụ": "Phòng Quản trị Dữ liệu", "Chi phí hạ tầng được phân bổ 1 năm": "1,100,000,000", "Chi phí QTVH": "80,000,000", "Tên cấu phần": "Analytics DB Postgres Node", "CPU": 32, "RAM (GB)": 128, "Storage (GB)": 3500 }
         ];
 
         parsePortfolioFromRows(mockRows);
