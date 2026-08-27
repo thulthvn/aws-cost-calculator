@@ -1312,12 +1312,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 mergedComputeVND += app.eksClusterFeeVND;
             }
 
-            // Database replication compute cost
-            if (app.totalReplicationComputeVND > 0) {
-                mergedDatabaseVND += app.totalReplicationComputeVND;
-            }
-
-            const totalPhuTroVND = app.totalAncillaryVND + (app.totalDataTransferVND || 0);
+            // Calculate base data transfer VND (excluding replication DTO)
+            const baseDataTransferVND = app.components.reduce((sum, comp) => sum + (comp.yearlyDataTransferCostVND || 0), 0);
+            const totalPhuTroVND = app.totalAncillaryVND + baseDataTransferVND;
             const cloudServiceCostVND = app.grandTotalAwsVND - (app.totalRealtimeReplicationVND || 0) - (app.migrationCostVND || 0) - (app.qtvhCost || 0);
             const denom = cloudServiceCostVND > 0 ? cloudServiceCostVND : 1;
 
