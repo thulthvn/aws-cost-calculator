@@ -753,8 +753,8 @@ document.addEventListener('DOMContentLoaded', () => {
         const elAnbmCost = document.getElementById('compliance-anbm-cost');
         const isAnbmCostActive = elAnbmCost ? elAnbmCost.checked : true;
         const elAnbmPct = document.getElementById('compliance-anbm-pct');
-        const rawAnbmPct = elAnbmPct ? parseFloat(elAnbmPct.value) : 10;
-        const anbmPct = isNaN(rawAnbmPct) ? 10 : Math.max(0, Math.min(100, rawAnbmPct));
+        const rawAnbmPct = elAnbmPct ? parseFloat(elAnbmPct.value) : 6;
+        const anbmPct = isNaN(rawAnbmPct) ? 6 : Math.max(0, Math.min(100, rawAnbmPct));
 
         // Get Plan discount multiplier
         let discountMultiplier = 1.0;
@@ -1227,7 +1227,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                          ` : ''}
                                          ${(isAnbmCostActive || app.anbmCostVND > 0) ? `
                                              <tr style="background: rgba(0, 90, 54, 0.02); font-weight:600;">
-                                                 <td colspan="6">Chi phí An ninh bảo mật (ANBM - ${app.anbmPct || 10}%)</td>
+                                                 <td colspan="6">Chi phí An ninh bảo mật (ANBM - ${app.anbmPct || 6}%)</td>
                                                  <td><span class="instance-code" style="color: var(--primary-color);">ANBM</span></td>
                                                  <td class="text-right">-</td>
                                                  <td class="text-right">-</td>
