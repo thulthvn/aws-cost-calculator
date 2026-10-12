@@ -159,7 +159,7 @@
                                 <!-- Ancillary costs slider (Network, monitoring, cloudwatch, support) -->
                                 <div class="slider-group margin-top-lg">
                                     <div class="slider-header">
-                                        <span class="slider-label"><i data-lucide="network"></i> Chi phí dịch vụ phụ trợ (Network, Monitoring, Security)</span>
+                                        <span class="slider-label"><i data-lucide="network"></i> Chi phí dịch vụ phụ trợ (Network, Monitoring,...)</span>
                                         <span id="val-ancillary-pct" class="slider-value">10%</span>
                                     </div>
                                     <input type="range" id="input-ancillary-pct" min="5" max="30" step="5" value="10" class="custom-range">
@@ -187,6 +187,23 @@
                                                 Tính chi phí chuyển đổi (Migration Mandays)
                                             </label>
                                             <p class="slider-tip" style="margin-top: 0; line-height: 1.35; font-size: 0.74rem;">Tính toán chi phí chuyển đổi của ứng dụng dựa trên quy đổi mức độ phức tạp (Số lượng cấu phần sang số manday chuyển đổi).</p>
+                                        </div>
+                                    </div>
+
+                                    <div class="custom-checkbox-wrapper" style="display: flex; align-items: flex-start; gap: 10px; cursor: pointer; border-top: 1px dashed var(--border-color); padding-top: 1rem;">
+                                        <input type="checkbox" id="compliance-anbm-cost" class="custom-checkbox" checked style="width: 18px; height: 18px; cursor: pointer; margin-top: 2px;">
+                                        <div style="display: flex; flex-direction: column; gap: 2px; width: 100%;">
+                                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                                <label for="compliance-anbm-cost" style="font-weight: 700; color: var(--text-main); font-size: 0.88rem; cursor: pointer; display: flex; align-items: center; gap: 6px;">
+                                                    <i data-lucide="shield-check" style="color: var(--primary-color); width: 16px; height: 16px;"></i>
+                                                    Tính chi phí An ninh bảo mật (ANBM)
+                                                </label>
+                                                <div style="display: flex; align-items: center; gap: 4px;">
+                                                    <input type="number" id="compliance-anbm-pct" min="0" max="100" value="10" step="1" style="width: 58px; padding: 2px 4px; font-size: 0.82rem; font-weight: 700; border: 1px solid var(--border-color); border-radius: 4px; text-align: right; color: var(--primary-color);">
+                                                    <span style="font-size: 0.82rem; font-weight: 700; color: var(--text-muted);">%</span>
+                                                </div>
+                                            </div>
+                                            <p class="slider-tip" style="margin-top: 0; line-height: 1.35; font-size: 0.74rem;">Bổ sung chi phí An ninh bảo mật theo tỷ lệ % (từ 0% đến 100%, mặc định 10%) trên tổng chi phí dịch vụ Cloud.</p>
                                         </div>
                                     </div>
                                 </div>
@@ -257,21 +274,18 @@
                                     <th class="sortable" data-sort="maPM" style="width: 100px;">Mã PM <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
                                     <th class="sortable" data-sort="tenPM" style="width: 180px;">Tên PM <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
                                     <th class="sortable" data-sort="owner" style="width: 160px;">Đơn vị đầu mối nghiệp vụ <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
-                                    <th class="sortable" data-sort="phanNhom" style="width: 150px;">Phân nhóm <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
                                     <th class="sortable text-right" data-sort="onPremCost" style="width: 180px;">Chi phí hạ tầng được phân bổ 1 năm <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
                                     <th class="sortable text-right" data-sort="grandTotalAwsVND" style="width: 180px;">Chi phí trên AWS Cloud trong 1 năm <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
                                     <th style="width: 250px;">Số tiền/Tỷ lệ % dịch vụ</th>
                                     <th class="sortable text-right" data-sort="deltaVND" style="width: 150px;">Số tiền tăng/giảm <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
                                     <th class="sortable text-right" data-sort="deltaPct" style="width: 120px;">Tỷ lệ tăng/giảm <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
-                                    <th class="sortable" data-sort="stability" style="width: 180px;">Độ ổn định <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
-                                    <th class="sortable" data-sort="performance" style="width: 180px;">Hiệu năng <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
                                     <th class="sortable" data-sort="recommend" style="width: 180px; text-align: center;">Đề xuất đưa lên Cloud <i class="sort-icon" data-lucide="chevrons-up-down"></i></th>
                                     <th style="width: 40px;"></th>
                                 </tr>
                             </thead>
                             <tbody id="results-table-body">
                                 <tr>
-                                    <td colspan="14" class="empty-table-state">
+                                    <td colspan="11" class="empty-table-state">
                                         <div class="empty-state-content">
                                             <i data-lucide="file-warning"></i>
                                             <h4>Chưa có dữ liệu phân tích</h4>
@@ -378,6 +392,10 @@
                                 <div class="input-wrapper margin-top-md">
                                     <label for="pricing-storage-msk"><i data-lucide="git-merge"></i> Lưu trữ MSK Kafka ($ / 100GB / tháng)</label>
                                     <input type="number" id="pricing-storage-msk" class="custom-input-text" value="10.00" min="0" max="100" step="0.1">
+                                </div>
+                                <div class="input-wrapper margin-top-md">
+                                    <label for="pricing-storage-s3-onezone"><i data-lucide="archive"></i> Lưu trữ S3 One Zone IA ($ / 100GB / tháng)</label>
+                                    <input type="number" id="pricing-storage-s3-onezone" class="custom-input-text" value="1.40" min="0" max="100" step="0.1">
                                 </div>
                                 <div class="input-wrapper margin-top-md">
                                     <label for="pricing-data-transfer-out"><i data-lucide="arrow-up-right"></i> Phí Data Transfer Out ($ / GB)</label>

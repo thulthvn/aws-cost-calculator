@@ -185,7 +185,8 @@ document.addEventListener('DOMContentLoaded', () => {
             dms: { 'us-east-1': 0.096, 'ap-southeast-1': 0.096, 'ap-northeast-1': 0.096, 'eu-central-1': 0.096 }      // gp3 DMS Storage
         },
         eksClusterYear: 876,
-        dataTransferOutRate: 0.12
+        dataTransferOutRate: 0.12,
+        s3OneZoneRate: 1.40
     };
 
     // Active working catalog state (mutable and synchronized with localStorage)
@@ -401,22 +402,22 @@ document.addEventListener('DOMContentLoaded', () => {
     // 5. EXCEL EXPORTER / TEMPLATE GENERATOR
     const downloadTemplate = () => {
         const headers = [
-            "STT", "Mã PM", "Tên PM", "Đơn vị đầu mối nghiệp vụ", "Phân nhóm", 
+            "STT", "Mã PM", "Tên PM", "Đơn vị đầu mối nghiệp vụ", 
             "Chi phí hạ tầng được phân bổ 1 năm", "Tên cấu phần", 
             "CPU", "RAM (GB)", "Storage (GB)", "Data Transfer Out (GB)", "Chi phí QTVH"
         ];
 
         // High fidelity sample data to help user understand the formatting
         const sampleRows = [
-            [1, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", "N1 — Ứng dụng web, quản trị nội bộ", 650000000, "Web Server Cluster", 4, 8, 150, 100, 50000000],
-            [2, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", "N1 — Ứng dụng web, quản trị nội bộ", 650000000, "Database Postgres High-Availability", 16, 64, 1500, 500, 50000000],
-            [3, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", "N2 — Kênh khách hàng, tác nghiệp phụ thuộc Core", 120000000, "Nền tảng CMS Frontend", 2, 4, 50, 50, 15000000],
-            [4, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", "N2 — Kênh khách hàng, tác nghiệp phụ thuộc Core", 120000000, "Cơ sở dữ liệu người dùng SQL", 4, 16, 250, 150, 15000000],
-            [5, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", "N6 — Phần mềm thương mại đóng gói", 90000000, "API Gateway & Application Server", 2, 4, 30, 20, 10000000],
-            [6, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", "N6 — Phần mềm thương mại đóng gói", 90000000, "Database HRM Postgres", 2, 8, 80, 40, 10000000],
-            [7, "PM-04", "Ứng dụng Di động m-Banking", "Khối Ngân hàng Số", "N3 — Thanh toán, thẻ, chứng khoán, ký số", 180000000, "Microservices Application Engine", 12, 24, 200, 300, 25000000],
-            [8, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", "N4 — Dữ liệu, báo cáo, xử lý theo lô", 1200000000, "Spark/BI Data Processing Node", 32, 128, 500, 1000, 80000000],
-            [9, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", "N4 — Dữ liệu, báo cáo, xử lý theo lô", 1200000000, "Data Warehouse Postgres Analytics", 64, 256, 4000, 2000, 80000000]
+            [1, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", 650000000, "Web Server Cluster", 4, 8, 150, 100, 50000000],
+            [2, "PM-01", "Hệ thống Core Banking", "Khối Dịch vụ Tài chính", 650000000, "Database Postgres High-Availability", 16, 64, 1500, 500, 50000000],
+            [3, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", 120000000, "Nền tảng CMS Frontend", 2, 4, 50, 50, 15000000],
+            [4, "PM-02", "Cổng thông tin Khách hàng (Portal)", "Phòng Quan hệ Công chúng", 120000000, "Cơ sở dữ liệu người dùng SQL", 4, 16, 250, 150, 15000000],
+            [5, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", 90000000, "API Gateway & Application Server", 2, 4, 30, 20, 10000000],
+            [6, "PM-03", "Hệ thống Quản trị Nhân sự (HRM)", "Khối Tổ chức Nhân sự", 90000000, "Database HRM Postgres", 2, 8, 80, 40, 10000000],
+            [7, "PM-04", "Ứng dụng Di động m-Banking", "Khối Ngân hàng Số", 180000000, "Microservices Application Engine", 12, 24, 200, 300, 25000000],
+            [8, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", 1200000000, "Spark/BI Data Processing Node", 32, 128, 500, 1000, 80000000],
+            [9, "PM-05", "Nền tảng Báo cáo Phân tích BI & AI", "Phòng Quản lý Dữ liệu", 1200000000, "Data Warehouse Postgres Analytics", 64, 256, 4000, 2000, 80000000]
         ];
 
         // Build workbook
@@ -424,13 +425,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const ws_data = [headers, ...sampleRows];
         const ws = XLSX.utils.aoa_to_sheet(ws_data);
 
-        // Styling widths (optional but nice)
+        // Styling widths
         ws['!cols'] = [
             { wch: 6 },  // STT
             { wch: 10 }, // Mã PM
             { wch: 35 }, // Tên PM
             { wch: 30 }, // Đơn vị nghiệp vụ
-            { wch: 30 }, // Phân nhóm
             { wch: 32 }, // Chi phí On-Prem
             { wch: 35 }, // Tên cấu phần
             { wch: 8 },  // CPU
@@ -451,32 +451,97 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, { type: 'array' });
-                const firstSheetName = workbook.SheetNames[0];
-                const worksheet = workbook.Sheets[firstSheetName];
                 
-                // Parse rows into JSON
-                const rows = XLSX.utils.sheet_to_json(worksheet);
-                
-                if (rows.length === 0) {
-                    alert("File Excel rỗng! Vui lòng kiểm tra lại dữ liệu.");
+                if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+                    alert("Tệp Excel không chứa sheet dữ liệu nào. Vui lòng kiểm tra lại.");
                     return;
                 }
 
-                // Verify headers by testing existence of key attributes
-                const sampleRow = rows[0];
-                const headerKeys = Object.keys(sampleRow);
-                
-                // Simple Vietnamese columns checker
-                const matches = headerKeys.filter(k => 
-                    k.includes("Mã") || k.includes("Tên") || k.includes("phần") || k.includes("CPU") || k.includes("RAM") || k.includes("Storage")
-                );
+                // 1. Select sheet containing data
+                let targetSheet = null;
+                let targetSheetName = "";
 
-                if (matches.length < 3) {
-                    alert("Cảnh báo: Định dạng cột không khớp chính xác. Hãy chắc chắn rằng bạn dùng đúng file mẫu để kết quả tính chính xác nhất.");
+                for (const sheetName of workbook.SheetNames) {
+                    const sheet = workbook.Sheets[sheetName];
+                    if (!sheet || !sheet['!ref']) continue;
+                    
+                    const matrix = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+                    if (matrix.length > 0) {
+                        targetSheet = sheet;
+                        targetSheetName = sheetName;
+                        break;
+                    }
+                }
+
+                if (!targetSheet) {
+                    targetSheetName = workbook.SheetNames[0];
+                    targetSheet = workbook.Sheets[targetSheetName];
+                }
+
+                // 2. Convert sheet to 2D matrix to detect header row dynamically
+                const matrix = XLSX.utils.sheet_to_json(targetSheet, { header: 1, defval: "" });
+                
+                if (!matrix || matrix.length === 0) {
+                    alert("Tệp Excel rỗng hoặc không có dữ liệu!");
+                    return;
+                }
+
+                // Find header row (the row with highest match count of expected keywords)
+                const keywords = ["ma", "ten", "cau phan", "cpu", "ram", "storage", "don vi", "chi phi", "stt", "pm"];
+                let bestHeaderIndex = 0;
+                let maxMatches = 0;
+
+                for (let r = 0; r < Math.min(15, matrix.length); r++) {
+                    const rowCells = matrix[r];
+                    if (!Array.isArray(rowCells)) continue;
+                    let matches = 0;
+                    rowCells.forEach(cell => {
+                        const cellStr = String(cell || "").toLowerCase()
+                            .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
+                            .replace(/đ/g, "d");
+                        if (keywords.some(kw => cellStr.includes(kw))) {
+                            matches++;
+                        }
+                    });
+                    if (matches > maxMatches) {
+                        maxMatches = matches;
+                        bestHeaderIndex = r;
+                    }
+                }
+
+                // Construct rows JSON array from bestHeaderIndex
+                let rows = [];
+                if (maxMatches >= 2 && bestHeaderIndex > 0) {
+                    const headers = matrix[bestHeaderIndex].map(h => String(h || "").trim());
+                    for (let r = bestHeaderIndex + 1; r < matrix.length; r++) {
+                        const rowData = matrix[r];
+                        if (!Array.isArray(rowData) || rowData.every(c => c === "" || c === null || c === undefined)) continue;
+                        const rowObj = {};
+                        headers.forEach((h, colIdx) => {
+                            if (h) {
+                                rowObj[h] = rowData[colIdx] !== undefined ? rowData[colIdx] : "";
+                            } else {
+                                rowObj[`__EMPTY_${colIdx}`] = rowData[colIdx] !== undefined ? rowData[colIdx] : "";
+                            }
+                        });
+                        rows.push(rowObj);
+                    }
+                } else {
+                    rows = XLSX.utils.sheet_to_json(targetSheet);
+                }
+
+                if (!rows || rows.length === 0) {
+                    alert("Không tìm thấy dữ liệu hợp lệ trong tệp Excel. Vui lòng kiểm tra lại cấu trúc bảng.");
+                    return;
                 }
 
                 parsePortfolioFromRows(rows);
-                
+
+                if (!parsedPortfolio || parsedPortfolio.length === 0) {
+                    alert("Không đọc được ứng dụng nào từ tệp Excel. Vui lòng đảm bảo tệp chứa các cột: Mã PM / Tên PM, Tên cấu phần, CPU, RAM, Storage.");
+                    return;
+                }
+
                 // Show file loaded state
                 elFileName.innerText = file.name;
                 elFileBadge.style.display = 'flex';
@@ -487,32 +552,59 @@ document.addEventListener('DOMContentLoaded', () => {
 
             } catch (err) {
                 console.error("Error reading excel file:", err);
-                alert("Đã xảy ra lỗi khi đọc file Excel. Vui lòng thử lại.");
+                alert("Đã xảy ra lỗi khi đọc tệp Excel: " + (err.message || err) + "\nVui lòng kiểm tra lại định dạng tệp tin.");
             }
+        };
+        reader.onerror = () => {
+            alert("Lỗi đọc tệp tin từ đĩa. Vui lòng thử lại.");
         };
         reader.readAsArrayBuffer(file);
     };
 
     // Fuzzy matching helper to retrieve row values under slightly different spellings or capitalizations
     const getRowValue = (row, candidates) => {
+        if (!row || typeof row !== 'object') return "";
         const keys = Object.keys(row);
         for (const key of keys) {
-            // Normalize key: trim, lowercase, and strip Vietnamese accents
-            const cleanKey = key.trim().toLowerCase()
+            if (!key || key.startsWith('__')) continue;
+            const keyStr = String(key).trim();
+            if (!keyStr) continue;
+
+            const cleanKey = keyStr.toLowerCase()
                 .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
-                .replace(/đ/g, "d"); // replace special Vietnamese 'd'
+                .replace(/đ/g, "d");
                 
+            if (!cleanKey) continue;
+
             for (const candidate of candidates) {
-                const cleanCandidate = candidate.trim().toLowerCase()
+                const cleanCandidate = String(candidate).trim().toLowerCase()
                     .normalize("NFD").replace(/[\u0300-\u036f]/g, "")
                     .replace(/đ/g, "d");
                     
-                if (cleanKey === cleanCandidate || cleanKey.includes(cleanCandidate) || cleanCandidate.includes(cleanKey)) {
-                    return row[key];
+                if (!cleanCandidate) continue;
+
+                if (
+                    cleanKey === cleanCandidate || 
+                    cleanKey.includes(cleanCandidate) || 
+                    (cleanKey.length >= 3 && cleanCandidate.includes(cleanKey))
+                ) {
+                    const val = row[key];
+                    if (val !== undefined && val !== null) {
+                        return val;
+                    }
                 }
             }
         }
         return "";
+    };
+
+    // Helper to extract clean numbers from Excel cells (supports numeric cells, currency strings, etc.)
+    const cleanNumber = (val) => {
+        if (typeof val === 'number') return isNaN(val) ? 0 : val;
+        if (!val) return 0;
+        const str = String(val).replace(/[^0-9.-]/g, '');
+        const num = parseFloat(str);
+        return isNaN(num) ? 0 : num;
     };
 
     // Parse flat Excel rows into aggregated Applications
@@ -537,18 +629,22 @@ document.addEventListener('DOMContentLoaded', () => {
             let rawName = String(getRowValue(row, ["ten pm", "ten phan mem", "app name", "pm name", "ten_pm"]) || "").trim();
             let rawGroup = String(getRowValue(row, ["phan nhom", "nhom", "app group", "group"]) || "").trim();
             let rawOwner = String(getRowValue(row, ["don vi dau moi nghiep vu", "dau moi", "nghiep vu", "chu so huu", "business owner", "owner", "don vi"]) || "").trim();
-            let rawOnPremStr = String(getRowValue(row, ["chi phi ha tang duoc phan bo 1 nam", "chi phi ha tang", "chi phi 1 nam", "on-prem cost", "onprem cost", "budget", "chi phi"]) || "");
-            let rawQtvhStr = String(getRowValue(row, ["chi phi qtvh", "qtvh", "quan tri van hanh", "chi phi quan tri van hanh", "ops cost", "mgt cost"]) || "");
+            let rawOnPremVal = getRowValue(row, ["chi phi ha tang duoc phan bo 1 nam", "chi phi ha tang", "chi phi 1 nam", "on-prem cost", "onprem cost", "budget", "chi phi"]);
+            let rawQtvhVal = getRowValue(row, ["chi phi qtvh", "qtvh", "quan tri van hanh", "chi phi quan tri van hanh", "ops cost", "mgt cost"]);
             const rawCompName = String(getRowValue(row, ["ten cau phan", "cau phan", "component name", "component", "device", "ten thiet bi"]) || "").trim();
-            let cpuVal = parseFloat(getRowValue(row, ["cpu", "vcpu", "cores", "core"]));
-            let ramVal = parseFloat(getRowValue(row, ["ram (gb)", "ram", "memory", "dung luong ram"]));
-            let storageVal = parseFloat(getRowValue(row, ["storage (gb)", "storage", "disk", "dung luong", "o cung", "hdd", "ssd"]));
-            let dtoVal = parseFloat(getRowValue(row, ["data transfer out (gb)", "data transfer out", "data transfer", "transfer out", "outbound transfer", "dto"]));
+            
+            const rawCpuVal = getRowValue(row, ["cpu", "vcpu", "cores", "core"]);
+            const rawRamVal = getRowValue(row, ["ram (gb)", "ram", "memory", "dung luong ram"]);
+            const rawStorageVal = getRowValue(row, ["storage (gb)", "storage", "disk", "dung luong", "o cung", "hdd", "ssd"]);
+            const rawDtoVal = getRowValue(row, ["data transfer out (gb)", "data transfer out", "data transfer", "transfer out", "outbound transfer", "dto"]);
 
-            const rawCpu = isNaN(cpuVal) ? 0 : cpuVal;
-            const rawRam = isNaN(ramVal) ? 0 : ramVal;
-            const rawStorage = isNaN(storageVal) ? 0 : storageVal;
-            const rawDto = isNaN(dtoVal) ? 0 : dtoVal;
+            const rawCpu = cleanNumber(rawCpuVal);
+            const rawRam = cleanNumber(rawRamVal);
+            const rawStorage = cleanNumber(rawStorageVal);
+            const rawDto = cleanNumber(rawDtoVal);
+
+            let rawOnPremStr = String(rawOnPremVal !== undefined && rawOnPremVal !== null ? rawOnPremVal : "");
+            let rawQtvhStr = String(rawQtvhVal !== undefined && rawQtvhVal !== null ? rawQtvhVal : "");
 
             // Carry forward values if current row has component data but missing parent app headers
             if (!rawCode && !rawName && rawCompName) {
@@ -571,8 +667,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!rawCode && !rawName) return; // Skip truly empty rows
 
             // Clean OnPremise Cost & QTVH Cost
-            const cleanedOnPrem = parseFloat((rawOnPremStr || "0").replace(/[^0-9.-]/g, '')) || 0;
-            const cleanedQtvh = parseFloat((rawQtvhStr || "0").replace(/[^0-9.-]/g, '')) || 0;
+            const cleanedOnPrem = cleanNumber(rawOnPremVal || rawOnPremStr);
+            const cleanedQtvh = cleanNumber(rawQtvhVal || rawQtvhStr);
 
             const appKey = rawCode || rawName;
 
@@ -654,12 +750,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const elMigrationCost = document.getElementById('compliance-migration-cost');
         const isMigrationCostActive = elMigrationCost ? elMigrationCost.checked : false;
 
+        const elAnbmCost = document.getElementById('compliance-anbm-cost');
+        const isAnbmCostActive = elAnbmCost ? elAnbmCost.checked : true;
+        const elAnbmPct = document.getElementById('compliance-anbm-pct');
+        const rawAnbmPct = elAnbmPct ? parseFloat(elAnbmPct.value) : 10;
+        const anbmPct = isNaN(rawAnbmPct) ? 10 : Math.max(0, Math.min(100, rawAnbmPct));
+
         // Get Plan discount multiplier
         let discountMultiplier = 1.0;
         if (plan === 'ri1') discountMultiplier = 0.70; // 30% off
         if (plan === 'ri3') discountMultiplier = 0.50; // 50% off
 
         const dtoRate = INSTANCE_CATALOG.dataTransferOutRate !== undefined ? INSTANCE_CATALOG.dataTransferOutRate : 0.12;
+        const s3OneZoneRate = INSTANCE_CATALOG.s3OneZoneRate !== undefined ? INSTANCE_CATALOG.s3OneZoneRate : 1.40;
 
         processedPortfolio = parsedPortfolio.map((app, index) => {
             let totalBaseAwsUSD = 0;
@@ -670,6 +773,10 @@ document.addEventListener('DOMContentLoaded', () => {
             let totalReplicationComputeVND = 0;
             let totalReplicationDtoVND = 0;
             let totalRealtimeReplicationVND = 0;
+            let totalDbStorageGB = 0;
+            let vnStorageS3CostVND = 0;
+            let vnStorageDtoCostVND = 0;
+            let vnStorageCostVND = 0;
             let hasCompute = false;
 
             const calculatedComponents = app.components.map((comp) => {
@@ -721,8 +828,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     totalRealtimeReplicationVND += realtimeReplicationCostVND;
                 }
 
+                // Chi phí Lưu trữ dữ liệu tại Việt Nam (S3 One Zone IA & DTO đối với Database)
+                let compVnStorageCostVND = 0;
+                let compVnStorageS3VND = 0;
+                let compVnStorageDtoVND = 0;
+                if (comp.serviceType === 'rds') {
+                    totalDbStorageGB += (comp.storage || 0);
+                    const compS3CostUSD = comp.storage * (s3OneZoneRate / 100) * 12;
+                    const compDtoCostUSD = comp.storage * dtoRate;
+                    compVnStorageS3VND = compS3CostUSD * USD_TO_VND;
+                    compVnStorageDtoVND = compDtoCostUSD * USD_TO_VND;
+                    compVnStorageCostVND = compVnStorageS3VND + compVnStorageDtoVND;
+
+                    vnStorageS3CostVND += compVnStorageS3VND;
+                    vnStorageDtoCostVND += compVnStorageDtoVND;
+                    vnStorageCostVND += compVnStorageCostVND;
+                }
+
                 const componentYearlyTotalUSD = yearlyComputeUSD + yearlyStorageUSD + yearlyDataTransferUSD;
-                const totalYearlyCostVND = (componentYearlyTotalUSD * USD_TO_VND) + realtimeReplicationCostVND;
+                const totalYearlyCostVND = (componentYearlyTotalUSD * USD_TO_VND) + realtimeReplicationCostVND + compVnStorageCostVND;
 
                 // Sum up aggregates
                 totalBaseAwsUSD += componentYearlyTotalUSD;
@@ -743,6 +867,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     yearlyComputeCostVND: yearlyComputeUSD * USD_TO_VND,
                     yearlyStorageCostVND: yearlyStorageUSD * USD_TO_VND,
                     yearlyDataTransferCostVND: yearlyDataTransferUSD * USD_TO_VND,
+                    compVnStorageS3VND,
+                    compVnStorageDtoVND,
+                    compVnStorageCostVND,
                     realtimeReplicationCostVND,
                     ec2ReplicationVND,
                     dmsReplicationVND,
@@ -775,18 +902,22 @@ document.addEventListener('DOMContentLoaded', () => {
             const complexityLevel = numComponents > 0 ? (matchedComplexity ? matchedComplexity.level : "Không xác định") : "Không có";
             const migrationCostVND = isMigrationCostActive ? (migrationMandays * MANDAY_RATE) : 0;
 
+            // ANBM (Information Security) cost
+            const cloudServiceCostVND = (totalBaseAwsUSD + totalAncillaryUSD) * USD_TO_VND;
+            const anbmCostVND = isAnbmCostActive ? (cloudServiceCostVND * (anbmPct / 100)) : 0;
+
             // Grand total
             const grandTotalAwsUSD = totalBaseAwsUSD + totalAncillaryUSD;
-            const grandTotalAwsVND = (grandTotalAwsUSD * USD_TO_VND) + totalRealtimeReplicationVND + migrationCostVND + (app.qtvhCost || 0);
+            const grandTotalAwsVND = (grandTotalAwsUSD * USD_TO_VND) + totalRealtimeReplicationVND + migrationCostVND + (app.qtvhCost || 0) + anbmCostVND + vnStorageCostVND;
 
             // Deltas
             const deltaVND = grandTotalAwsVND - app.onPremCost;
             const deltaPct = app.onPremCost > 0 ? (deltaVND / app.onPremCost) * 100 : 0;
 
             // Get stability & performance properties from Group dictionary
-            const grp = GROUP_INFO[app.phanNhom || "N1"] || GROUP_INFO["N1"];
-            const stability = grp.stability;
-            const performance = grp.performance;
+            const grp = (GROUP_INFO && (GROUP_INFO[app.phanNhom || "N1"] || GROUP_INFO["N1"])) || (DEFAULT_GROUP_INFO && DEFAULT_GROUP_INFO["N1"]) || {};
+            const stability = grp.stability || "";
+            const performance = grp.performance || "";
             const stabilityAbbr = grp.stabilityAbbr || "M1";
             const performanceAbbr = grp.performanceAbbr || "M1";
 
@@ -807,8 +938,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 totalReplicationComputeVND,
                 totalReplicationDtoVND,
                 totalRealtimeReplicationVND,
+                totalDbStorageGB,
+                vnStorageS3CostVND,
+                vnStorageDtoCostVND,
+                vnStorageCostVND,
                 migrationMandays,
                 migrationCostVND,
+                anbmCostVND,
+                anbmPct,
                 complexityLevel,
                 deltaVND,
                 deltaPct,
@@ -873,6 +1010,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // Render primary comparison grid records
     const renderTableRows = () => {
         const searchTerm = elSearchInput.value.toLowerCase().trim();
+        const elAnbmCost = document.getElementById('compliance-anbm-cost');
+        const isAnbmCostActive = elAnbmCost ? elAnbmCost.checked : true;
+
         elTableBody.innerHTML = '';
 
         const filtered = processedPortfolio.filter(app => 
@@ -925,7 +1065,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td><span class="pm-code">${app.maPM}</span></td>
                 <td><strong>${app.tenPM}</strong></td>
                 <td><span class="biz-owner">${app.owner}</span></td>
-                <td><span class="group-badge group-${app.phanNhom}" title="${GROUP_INFO[app.phanNhom].name}">${app.phanNhom}</span></td>
                 <td class="text-right cost-bold-yellow">${formatVND(app.onPremCost)}</td>
                 <td class="text-right cost-bold-green">${formatVND(app.grandTotalAwsVND)}</td>
                 <td>
@@ -948,8 +1087,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 <td class="text-right">
                     <span class="delta-pct ${deltaClass}" style="font-weight: 700; font-size: 0.85rem; font-family: var(--font-display);">${pctText}</span>
                 </td>
-                <td style="text-align: center;"><span class="text-subtle-desc cursor-help" title="${app.stability}">${app.stabilityAbbr}</span></td>
-                <td style="text-align: center;"><span class="text-subtle-desc cursor-help" title="${app.performance}">${app.performanceAbbr}</span></td>
                 <td style="text-align: center;">
                     <span class="recommendation-badge ${recClass}">
                         ${recLabel}
@@ -965,7 +1102,7 @@ document.addEventListener('DOMContentLoaded', () => {
             trDetail.className = 'detail-row';
             trDetail.style.display = 'none'; // Initially hidden
             trDetail.innerHTML = `
-                <td colspan="14">
+                <td colspan="11">
                     <div class="detail-drawer-container">
                         <div class="drawer-grid">
                             <div class="components-table-block">
@@ -1058,6 +1195,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                                 <td class="text-right" style="color: var(--primary-color);">${formatVND(app.totalRealtimeReplicationVND)}</td>
                                             </tr>
                                         ` : ''}
+                                        ${app.vnStorageCostVND > 0 ? `
+                                            <tr style="background: rgba(0, 90, 54, 0.02); font-weight:600;">
+                                                <td colspan="6">Chi phí Lưu trữ dữ liệu tại Việt Nam (S3 One Zone IA & DTO - ${app.totalDbStorageGB || 0} GB DB)</td>
+                                                <td><span class="instance-code" style="color: var(--primary-color);">S3 One Zone</span></td>
+                                                <td class="text-right">-</td>
+                                                <td class="text-right" style="color: #FDB813;">${formatVND(app.vnStorageS3CostVND)}</td>
+                                                <td class="text-right" style="color: #8E24AA;">${formatVND(app.vnStorageDtoCostVND)}</td>
+                                                <td class="text-right" style="color: var(--primary-color); font-weight: 700;">${formatVND(app.vnStorageCostVND)}</td>
+                                            </tr>
+                                        ` : ''}
                                          ${app.qtvhCost > 0 ? `
                                              <tr style="background: rgba(0, 90, 54, 0.02); font-weight:600;">
                                                  <td colspan="6">Chi phí quản trị vận hành (QTVH)</td>
@@ -1078,12 +1225,22 @@ document.addEventListener('DOMContentLoaded', () => {
                                                  <td class="text-right" style="color: var(--primary-color); font-weight: 700;">${formatVND(app.migrationCostVND)}</td>
                                              </tr>
                                          ` : ''}
+                                         ${(isAnbmCostActive || app.anbmCostVND > 0) ? `
+                                             <tr style="background: rgba(0, 90, 54, 0.02); font-weight:600;">
+                                                 <td colspan="6">Chi phí An ninh bảo mật (ANBM - ${app.anbmPct || 10}%)</td>
+                                                 <td><span class="instance-code" style="color: var(--primary-color);">ANBM</span></td>
+                                                 <td class="text-right">-</td>
+                                                 <td class="text-right">-</td>
+                                                 <td class="text-right">-</td>
+                                                 <td class="text-right" style="color: var(--primary-color); font-weight: 700;">${formatVND(app.anbmCostVND)}</td>
+                                             </tr>
+                                         ` : ''}
                                          <tr style="background: rgba(0, 90, 54, 0.04); font-weight:700;">
                                             <td colspan="6">Tổng cộng toàn bộ cấu phần ứng dụng</td>
                                             <td><span class="instance-code" style="color: #005A36;">AWS Mapped</span></td>
                                             <td class="text-right" style="color: #1565C0;">${formatVND(app.totalComputeVND + app.eksClusterFeeVND + app.totalReplicationComputeVND)}</td>
-                                            <td class="text-right" style="color: #FDB813;">${formatVND(app.totalStorageVND)}</td>
-                                            <td class="text-right" style="color: #8E24AA;">${formatVND(app.totalDataTransferVND || 0)}</td>
+                                            <td class="text-right" style="color: #FDB813;">${formatVND(app.totalStorageVND + (app.vnStorageS3CostVND || 0))}</td>
+                                            <td class="text-right" style="color: #8E24AA;">${formatVND((app.totalDataTransferVND || 0) + (app.vnStorageDtoCostVND || 0))}</td>
                                             <td class="text-right" style="color: #005A36;">${formatVND(app.grandTotalAwsVND)}</td>
                                         </tr>
                                     </tbody>
@@ -1315,7 +1472,7 @@ document.addEventListener('DOMContentLoaded', () => {
             // Calculate base data transfer VND (excluding replication DTO)
             const baseDataTransferVND = app.components.reduce((sum, comp) => sum + (comp.yearlyDataTransferCostVND || 0), 0);
             const totalPhuTroVND = app.totalAncillaryVND + baseDataTransferVND;
-            const cloudServiceCostVND = app.grandTotalAwsVND - (app.totalRealtimeReplicationVND || 0) - (app.migrationCostVND || 0) - (app.qtvhCost || 0);
+            const cloudServiceCostVND = app.grandTotalAwsVND - (app.totalRealtimeReplicationVND || 0) - (app.vnStorageCostVND || 0) - (app.migrationCostVND || 0) - (app.qtvhCost || 0) - (app.anbmCostVND || 0);
             const denom = cloudServiceCostVND > 0 ? cloudServiceCostVND : 1;
 
             const computePct = Math.round((mergedComputeVND / denom) * 100) || 0;
@@ -1334,19 +1491,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 "Mã PM": app.maPM,
                 "Tên PM": app.tenPM,
                 "Đơn vị đầu mối nghiệp vụ": app.owner,
-                "Phân nhóm": GROUP_INFO[app.phanNhom].name,
                 "Chi phí hạ tầng được phân bổ 1 năm": Math.round(app.onPremCost),
                 "Chi phí trên AWS Cloud trong 1 năm": Math.round(app.grandTotalAwsVND),
                 "Chi tiết chi phí dịch vụ Cloud": serviceBreakdown,
                 "Chi phí dịch vụ Cloud": Math.round(cloudServiceCostVND),
                 "Chi phí Data Transfer Out": Math.round(app.totalDataTransferVND || 0),
                 "Chi phí lưu bản sao cập nhật real time tại VN": Math.round(app.totalRealtimeReplicationVND || 0),
+                "Chi phí Lưu trữ dữ liệu tại Việt Nam": Math.round(app.vnStorageCostVND || 0),
                 "Chi phí chuyển đổi": Math.round(app.migrationCostVND || 0),
                 "Chi phí QTVH": Math.round(app.qtvhCost || 0),
+                "Chi phí ANBM": Math.round(app.anbmCostVND || 0),
                 "Số tiền tăng/giảm": deltaAmtText,
                 "Tỷ lệ tăng/giảm": deltaPctText,
-                "Độ ổn định": app.stability,
-                "Hiệu năng": app.performance,
                 "Mức độ phức tạp": app.complexityLevel,
                 "Số ngày công chuyển đổi (Mandays)": app.migrationMandays,
                 "Đề xuất đưa lên Cloud": recText
@@ -1367,9 +1523,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     "Mã PM": app.maPM,
                     "Tên PM": app.tenPM,
                     "Đơn vị đầu mối nghiệp vụ": app.owner,
-                    "Phân nhóm": GROUP_INFO[app.phanNhom].name,
-                    "Độ ổn định": app.stability,
-                    "Hiệu năng": app.performance,
                     "Tên cấu phần": comp.name,
                     "Loại cấu phần": comp.serviceType === 'rds' ? "RDS Postgres" : (comp.serviceType === 'msk' ? "MSK Kafka" : (comp.serviceType === 'dms' ? "DMS Migration" : "EKS/EC2")),
                     "CPU": comp.cpu,
@@ -1382,7 +1535,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     "Chi phí phụ trợ (VND)": Math.round(compAncillaryVND),
                     "Phí AWS Data Transfer / Năm (VND)": Math.round(comp.yearlyDataTransferCostVND || 0),
                     "Chi phí QTVH (VND)": compIndex === 0 ? Math.round(app.qtvhCost || 0) : 0,
+                    "Chi phí ANBM (VND)": compIndex === 0 ? Math.round(app.anbmCostVND || 0) : 0,
                     "Phí tuân thủ sao lưu Việt Nam (VND)": Math.round(comp.realtimeReplicationCostVND || 0),
+                    "Chi phí Lưu trữ dữ liệu tại Việt Nam (VND)": Math.round(comp.compVnStorageCostVND || 0),
                     "Tổng chi phí AWS Cấu phần / Năm (VND)": Math.round(comp.totalYearlyCostVND)
                 });
             });
@@ -1398,19 +1553,18 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 12 },  // Mã PM
             { wch: 30 },  // Tên PM
             { wch: 25 },  // Đơn vị đầu mối nghiệp vụ
-            { wch: 35 },  // Phân nhóm
             { wch: 35 },  // Chi phí hạ tầng được phân bổ 1 năm
             { wch: 35 },  // Chi phí trên AWS Cloud trong 1 năm
             { wch: 80 },  // Chi tiết chi phí dịch vụ Cloud
             { wch: 25 },  // Chi phí dịch vụ Cloud
             { wch: 30 },  // Chi phí Data Transfer Out
             { wch: 45 },  // Chi phí lưu bản sao cập nhật real time tại VN
+            { wch: 40 },  // Chi phí Lưu trữ dữ liệu tại Việt Nam
             { wch: 25 },  // Chi phí chuyển đổi
             { wch: 20 },  // Chi phí QTVH
+            { wch: 20 },  // Chi phí ANBM
             { wch: 25 },  // Số tiền tăng/giảm
             { wch: 20 },  // Tỷ lệ tăng/giảm
-            { wch: 45 },  // Độ ổn định
-            { wch: 45 },  // Hiệu năng
             { wch: 25 },  // Mức độ phức tạp
             { wch: 30 },  // Số ngày công chuyển đổi (Mandays)
             { wch: 30 }   // Đề xuất đưa lên Cloud
@@ -1424,9 +1578,6 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 12 },  // Mã PM
             { wch: 30 },  // Tên PM
             { wch: 25 },  // Đơn vị đầu mối nghiệp vụ
-            { wch: 35 },  // Phân nhóm
-            { wch: 45 },  // Độ ổn định
-            { wch: 45 },  // Hiệu năng
             { wch: 30 },  // Tên cấu phần
             { wch: 15 },  // Loại cấu phần
             { wch: 8 },   // CPU
@@ -1439,7 +1590,9 @@ document.addEventListener('DOMContentLoaded', () => {
             { wch: 22 },  // Chi phí phụ trợ
             { wch: 32 },  // Phí AWS Data Transfer
             { wch: 20 },  // Chi phí QTVH
+            { wch: 20 },  // Chi phí ANBM
             { wch: 35 },  // Phí tuân thủ sao lưu Việt Nam (VND)
+            { wch: 40 },  // Chi phí Lưu trữ dữ liệu tại Việt Nam (VND)
             { wch: 32 }   // Tổng chi phí
         ];
         XLSX.utils.book_append_sheet(wb, wsDetail, "Chi_tiet_cau_phan");
@@ -1799,6 +1952,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const elStorageEbs = document.getElementById('pricing-storage-ebs');
         const elStorageRds = document.getElementById('pricing-storage-rds');
         const elStorageMsk = document.getElementById('pricing-storage-msk');
+        const elStorageS3OneZone = document.getElementById('pricing-storage-s3-onezone');
         const elDto = document.getElementById('pricing-data-transfer-out');
 
         if (elUsdVnd) USD_TO_VND = parseInt(elUsdVnd.value, 10) || 26000;
@@ -1807,9 +1961,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const ebsVal = parseFloat(elStorageEbs?.value || "9.60") / 100;
         const rdsVal = parseFloat(elStorageRds?.value || "13.80") / 100;
         const mskVal = parseFloat(elStorageMsk?.value || "10.00") / 100;
+        const s3OneZoneVal = parseFloat(elStorageS3OneZone?.value || "1.40");
         const dtoVal = parseFloat(elDto?.value || "0.12");
 
         INSTANCE_CATALOG.dataTransferOutRate = dtoVal;
+        INSTANCE_CATALOG.s3OneZoneRate = s3OneZoneVal;
 
         const regions = ['us-east-1', 'ap-southeast-1', 'ap-northeast-1', 'eu-central-1'];
         regions.forEach(r => {
@@ -1871,12 +2027,14 @@ document.addEventListener('DOMContentLoaded', () => {
             const elStorageEbs = document.getElementById('pricing-storage-ebs');
             const elStorageRds = document.getElementById('pricing-storage-rds');
             const elStorageMsk = document.getElementById('pricing-storage-msk');
+            const elStorageS3OneZone = document.getElementById('pricing-storage-s3-onezone');
             const elDto = document.getElementById('pricing-data-transfer-out');
 
             if (elUsdVnd) elUsdVnd.value = "26000";
             if (elStorageEbs) elStorageEbs.value = "9.60";
             if (elStorageRds) elStorageRds.value = "13.80";
             if (elStorageMsk) elStorageMsk.value = "10.00";
+            if (elStorageS3OneZone) elStorageS3OneZone.value = "1.40";
             if (elDto) elDto.value = "0.12";
 
             renderPricingTables();
@@ -1980,12 +2138,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const elStorageEbs = document.getElementById('pricing-storage-ebs');
         const elStorageRds = document.getElementById('pricing-storage-rds');
         const elStorageMsk = document.getElementById('pricing-storage-msk');
+        const elStorageS3OneZone = document.getElementById('pricing-storage-s3-onezone');
         const elDto = document.getElementById('pricing-data-transfer-out');
 
         if (elUsdVnd) elUsdVnd.value = USD_TO_VND;
         if (elStorageEbs) elStorageEbs.value = (INSTANCE_CATALOG.storage.ebs['us-east-1'] * 100).toFixed(2);
         if (elStorageRds) elStorageRds.value = (INSTANCE_CATALOG.storage.rds['us-east-1'] * 100).toFixed(2);
         if (elStorageMsk) elStorageMsk.value = (INSTANCE_CATALOG.storage.msk['us-east-1'] * 100).toFixed(2);
+        if (elStorageS3OneZone) {
+            elStorageS3OneZone.value = (INSTANCE_CATALOG.s3OneZoneRate !== undefined ? INSTANCE_CATALOG.s3OneZoneRate : 1.40).toFixed(2);
+        }
         if (elDto) {
             elDto.value = (INSTANCE_CATALOG.dataTransferOutRate !== undefined ? INSTANCE_CATALOG.dataTransferOutRate : 0.12).toFixed(2);
         }
@@ -2225,6 +2387,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const elMigrationCost = document.getElementById('compliance-migration-cost');
     if (elMigrationCost) {
         elMigrationCost.addEventListener('change', recalculateAll);
+    }
+    const elAnbmCost = document.getElementById('compliance-anbm-cost');
+    if (elAnbmCost) {
+        elAnbmCost.addEventListener('change', recalculateAll);
+    }
+    const elAnbmPct = document.getElementById('compliance-anbm-pct');
+    if (elAnbmPct) {
+        elAnbmPct.addEventListener('input', recalculateAll);
+        elAnbmPct.addEventListener('change', recalculateAll);
+    }
+    const elStorageS3OneZone = document.getElementById('pricing-storage-s3-onezone');
+    if (elStorageS3OneZone) {
+        elStorageS3OneZone.addEventListener('input', recalculateAll);
+        elStorageS3OneZone.addEventListener('change', recalculateAll);
     }
     
     elAncillaryPct.addEventListener('input', (e) => {
